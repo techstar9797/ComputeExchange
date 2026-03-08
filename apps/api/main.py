@@ -58,6 +58,10 @@ ExecutePlanAction = _shared_models.ExecutePlanAction
 FinalizeEpisodeAction = _shared_models.FinalizeEpisodeAction
 SwitchStrategyAction = _shared_models.SwitchStrategyAction
 CounterOfferAction = _shared_models.CounterOfferAction
+WorkloadDecomposition = _shared_models.WorkloadDecomposition
+TaskStage = _shared_models.TaskStage
+TaskStageType = _shared_models.TaskStageType
+ResourceType = _shared_models.ResourceType
 
 # Add openenv path for importing server modules
 _openenv_server_path = str(Path(__file__).parent.parent.parent / "openenv" / "compute_market_env")
@@ -366,17 +370,18 @@ async def start_negotiation(session_id: str, config: NegotiationConfig):
     if env.state.phase not in ["characterization", "negotiation"]:
         raise HTTPException(status_code=400, detail=f"Cannot negotiate in phase: {env.state.phase}")
     
-    # Request quotes
-    from models import RequestQuotesAction, SwitchStrategyAction
-    
     # Set strategy if different
     if env.state.negotiation is None or env.state.negotiation.strategy != config.strategy:
         switch_action = SwitchStrategyAction(new_strategy=config.strategy)
         env.step(switch_action)
     
+    # Convert decomposition to ensure consistent Pydantic model type
+    decomp_dict = env.state.decomposition.model_dump() if hasattr(env.state.decomposition, 'model_dump') else env.state.decomposition
+    decomp = WorkloadDecomposition(**decomp_dict)
+    
     # Request quotes
     action = RequestQuotesAction(
-        decomposition=env.state.decomposition,
+        decomposition=decomp,
         target_providers=config.target_providers,
     )
     obs = env.step(action)
@@ -397,7 +402,6 @@ async def send_counter_offer(session_id: str, offer_id: str, counter_price: floa
     """Send a counter-offer to a provider."""
     env = app_state.get_or_create_env(session_id)
     
-    from models import CounterOfferAction
     action = CounterOfferAction(offer_id=offer_id, counter_price_usd=counter_price)
     obs = env.step(action)
     
@@ -421,8 +425,11 @@ async def generate_plans(request: PlanGenerationRequest):
     workload = char_data["workload"]
     decomposition = char_data["result"].decomposition
     
-    # Get offers from environment
-    offers = env.state.offers if hasattr(env.state, 'offers') else []
+    # Get offers from environment negotiation state
+    offers = []
+    if env.state.negotiation and hasattr(env.state.negotiation, 'offers'):
+        offers = env.state.negotiation.offers
+    
     providers = env.state.providers if hasattr(env.state, 'providers') else []
     
     # Use planning agent to generate plans
@@ -449,12 +456,12 @@ async def generate_plans(request: PlanGenerationRequest):
         "plans": [
             {
                 "id": pc.plan.id,
-                "name": pc.plan.name,
+                "name": f"{pc.plan.plan_type.title()} Plan",
                 "strategy": pc.strategy,
                 "score": pc.score,
                 "cost": pc.plan.total_cost_usd,
                 "duration": pc.plan.total_duration_hours,
-                "reliability": pc.plan.estimated_reliability,
+                "reliability": pc.plan.reliability_score,
                 "carbon_kg": pc.plan.carbon_footprint_kg,
                 "pros": pc.pros,
                 "cons": pc.cons,
@@ -475,7 +482,6 @@ async def submit_plan_for_approval(session_id: str, plan_id: str, summary: str =
     """Submit a plan for human approval."""
     env = app_state.get_or_create_env(session_id)
     
-    from models import SubmitForApprovalAction
     action = SubmitForApprovalAction(plan_id=plan_id, summary=summary)
     obs = env.step(action)
     
@@ -496,10 +502,9 @@ async def approve_plan(request: ApprovalRequest):
     env = app_state.get_or_create_env(request.session_id)
     
     if request.decision == ApprovalDecision.APPROVE:
-        from models import ApprovePlanAction
-        action = ApprovePlanAction(plan_id=request.plan_id)
+        action = ApprovePlanAction(plan_id=request.plan_id, feedback=request.feedback)
     else:
-        from models import RejectPlanAction
+        RejectPlanAction = _shared_models.RejectPlanAction
         action = RejectPlanAction(plan_id=request.plan_id, reason=request.feedback, feedback=request.feedback)
     
     obs = env.step(action)
@@ -517,7 +522,6 @@ async def start_execution(request: ExecutionRequest):
     """Start executing an approved plan."""
     env = app_state.get_or_create_env(request.session_id)
     
-    from models import ExecutePlanAction
     action = ExecutePlanAction(plan_id=request.plan_id)
     obs = env.step(action)
     
@@ -535,7 +539,6 @@ async def finalize_episode(session_id: str):
     """Finalize the episode and get final results."""
     env = app_state.get_or_create_env(session_id)
     
-    from models import FinalizeEpisodeAction
     action = FinalizeEpisodeAction()
     obs = env.step(action)
     
@@ -700,7 +703,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 }
             
             elif msg_type == "step":
-                from models import ComputeMarketAction
+                ComputeMarketAction = _shared_models.ComputeMarketAction
                 
                 class DynamicAction(ComputeMarketAction):
                     class Config:

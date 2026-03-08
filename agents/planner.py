@@ -100,37 +100,40 @@ class PlanningAgent:
         total_cost = 0.0
         total_duration = 0.0
         
-        sorted_offers = sorted(offers, key=lambda o: o.total_cost_usd)
+        sorted_offers = sorted(offers, key=lambda o: o.quoted_price_usd)
         
         for stage in decomposition.stages:
             best_offer = self._find_cheapest_offer_for_stage(stage, sorted_offers, providers)
             
             if best_offer:
+                res_type = stage.required_resource_types[0] if stage.required_resource_types else ResourceType.CPU
+                duration = stage.estimated_duration_hours or 1.0
+                cost = self._calculate_stage_cost(stage, best_offer, providers)
                 allocation = ResourceAllocation(
                     stage_id=stage.id,
                     provider_id=best_offer.provider_id,
-                    resource_type=stage.required_resource_types[0] if stage.required_resource_types else ResourceType.CPU,
-                    quantity=best_offer.gpu_count or best_offer.cpu_count or 1,
-                    duration_hours=stage.estimated_duration_hours or 1.0,
-                    cost_usd=self._calculate_stage_cost(stage, best_offer),
+                    provider_name=best_offer.provider_name,
+                    resource_type=res_type,
+                    resource_count=self._get_resource_count(best_offer, res_type),
+                    estimated_duration_hours=duration,
+                    estimated_cost_usd=cost,
                     is_spot=best_offer.is_spot,
-                    region=best_offer.region,
                 )
                 allocations.append(allocation)
-                total_cost += allocation.cost_usd
-                total_duration += allocation.duration_hours
+                total_cost += cost
+                total_duration += duration
         
         if not allocations:
             return None
         
         plan = ExecutionPlan(
-            name="Cheapest Plan",
             workload_id=workload.id,
             allocations=allocations,
             total_cost_usd=total_cost,
             total_duration_hours=total_duration,
-            estimated_reliability=0.90,
+            reliability_score=0.90,
             carbon_footprint_kg=total_cost * 0.05,
+            plan_type="cheapest",
             status=PlanStatus.DRAFT,
         )
         
@@ -180,31 +183,34 @@ class PlanningAgent:
                 provider = next((p for p in providers if p.id == best_offer.provider_id), None)
                 speed_factor = 0.7 if provider and provider.reliability_score > 0.95 else 0.85
                 
+                res_type = stage.required_resource_types[0] if stage.required_resource_types else ResourceType.GPU
+                duration = (stage.estimated_duration_hours or 1.0) * speed_factor
+                cost = self._calculate_stage_cost(stage, best_offer, providers) * 1.3
                 allocation = ResourceAllocation(
                     stage_id=stage.id,
                     provider_id=best_offer.provider_id,
-                    resource_type=stage.required_resource_types[0] if stage.required_resource_types else ResourceType.GPU,
-                    quantity=max(best_offer.gpu_count or 1, best_offer.cpu_count or 1),
-                    duration_hours=(stage.estimated_duration_hours or 1.0) * speed_factor,
-                    cost_usd=self._calculate_stage_cost(stage, best_offer) * 1.3,
+                    provider_name=best_offer.provider_name,
+                    resource_type=res_type,
+                    resource_count=self._get_resource_count(best_offer, res_type),
+                    estimated_duration_hours=duration,
+                    estimated_cost_usd=cost,
                     is_spot=False,
-                    region=best_offer.region,
                 )
                 allocations.append(allocation)
-                total_cost += allocation.cost_usd
-                total_duration += allocation.duration_hours
+                total_cost += cost
+                total_duration += duration
         
         if not allocations:
             return None
         
         plan = ExecutionPlan(
-            name="Fastest Plan",
             workload_id=workload.id,
             allocations=allocations,
             total_cost_usd=total_cost,
             total_duration_hours=total_duration,
-            estimated_reliability=0.96,
+            reliability_score=0.96,
             carbon_footprint_kg=total_cost * 0.08,
+            plan_type="fastest",
             status=PlanStatus.DRAFT,
         )
         
@@ -249,7 +255,7 @@ class PlanningAgent:
         def score_offer(offer: ProviderOffer, stage: TaskStage) -> float:
             provider = next((p for p in providers if p.id == offer.provider_id), None)
             
-            cost_score = 1.0 - min(offer.total_cost_usd / (workload.budget_usd / len(decomposition.stages)), 1.0)
+            cost_score = 1.0 - min(offer.quoted_price_usd / (workload.budget_usd / len(decomposition.stages)), 1.0)
             reliability_score = provider.reliability_score if provider else 0.9
             latency_score = 1.0 - min((provider.avg_latency_ms if provider else 50) / 100, 1.0)
             
@@ -271,19 +277,22 @@ class PlanningAgent:
                         best_offer = offer
             
             if best_offer:
+                res_type = stage.required_resource_types[0] if stage.required_resource_types else ResourceType.GPU
+                duration = stage.estimated_duration_hours or 1.0
+                cost = self._calculate_stage_cost(stage, best_offer, providers)
                 allocation = ResourceAllocation(
                     stage_id=stage.id,
                     provider_id=best_offer.provider_id,
-                    resource_type=stage.required_resource_types[0] if stage.required_resource_types else ResourceType.GPU,
-                    quantity=best_offer.gpu_count or best_offer.cpu_count or 1,
-                    duration_hours=stage.estimated_duration_hours or 1.0,
-                    cost_usd=self._calculate_stage_cost(stage, best_offer),
+                    provider_name=best_offer.provider_name,
+                    resource_type=res_type,
+                    resource_count=self._get_resource_count(best_offer, res_type),
+                    estimated_duration_hours=duration,
+                    estimated_cost_usd=cost,
                     is_spot=best_offer.is_spot and workload.allow_spot_instances,
-                    region=best_offer.region,
                 )
                 allocations.append(allocation)
-                total_cost += allocation.cost_usd
-                total_duration += allocation.duration_hours
+                total_cost += cost
+                total_duration += duration
         
         if not allocations:
             return None
@@ -294,13 +303,13 @@ class PlanningAgent:
         ) / len(allocations)
         
         plan = ExecutionPlan(
-            name="Balanced Plan",
             workload_id=workload.id,
             allocations=allocations,
             total_cost_usd=total_cost,
             total_duration_hours=total_duration,
-            estimated_reliability=avg_reliability,
+            reliability_score=avg_reliability,
             carbon_footprint_kg=total_cost * 0.06,
+            plan_type="balanced",
             status=PlanStatus.DRAFT,
         )
         
@@ -366,32 +375,35 @@ class PlanningAgent:
                 best_carbon = 100
             
             if best_offer:
+                res_type = stage.required_resource_types[0] if stage.required_resource_types else ResourceType.CPU
+                duration = (stage.estimated_duration_hours or 1.0) * 1.1
+                cost = self._calculate_stage_cost(stage, best_offer, providers) * 1.15
                 allocation = ResourceAllocation(
                     stage_id=stage.id,
                     provider_id=best_offer.provider_id,
-                    resource_type=stage.required_resource_types[0] if stage.required_resource_types else ResourceType.CPU,
-                    quantity=best_offer.gpu_count or best_offer.cpu_count or 1,
-                    duration_hours=(stage.estimated_duration_hours or 1.0) * 1.1,
-                    cost_usd=self._calculate_stage_cost(stage, best_offer) * 1.15,
+                    provider_name=best_offer.provider_name,
+                    resource_type=res_type,
+                    resource_count=self._get_resource_count(best_offer, res_type),
+                    estimated_duration_hours=duration,
+                    estimated_cost_usd=cost,
                     is_spot=False,
-                    region=best_offer.region,
                 )
                 allocations.append(allocation)
-                total_cost += allocation.cost_usd
-                total_duration += allocation.duration_hours
+                total_cost += cost
+                total_duration += duration
                 total_carbon += best_carbon / 1000
         
         if not allocations:
             return None
         
         plan = ExecutionPlan(
-            name="Greenest Plan",
             workload_id=workload.id,
             allocations=allocations,
             total_cost_usd=total_cost,
             total_duration_hours=total_duration,
-            estimated_reliability=0.93,
+            reliability_score=0.93,
             carbon_footprint_kg=total_carbon,
+            plan_type="greenest",
             status=PlanStatus.DRAFT,
         )
         
@@ -417,6 +429,19 @@ class PlanningAgent:
             risk_factors=["Limited provider options in some regions"],
         )
 
+    def _get_resource_count(self, offer: ProviderOffer, resource_type: ResourceType) -> int:
+        """Get resource count from offer's resource_allocation."""
+        if hasattr(offer, 'resource_allocation') and offer.resource_allocation:
+            return offer.resource_allocation.get(resource_type, 1)
+        return 1
+    
+    def _get_offer_region(self, offer: ProviderOffer, providers: list[ProviderProfile]) -> str:
+        """Get region from offer or provider."""
+        provider = next((p for p in providers if p.id == offer.provider_id), None)
+        if provider and provider.regions:
+            return provider.regions[0]
+        return "us-west-2"
+
     def _find_cheapest_offer_for_stage(
         self, stage: TaskStage, offers: list[ProviderOffer], providers: list[ProviderProfile]
     ) -> Optional[ProviderOffer]:
@@ -424,7 +449,7 @@ class PlanningAgent:
         compatible = [o for o in offers if self._offer_compatible_with_stage(o, stage, providers)]
         if not compatible:
             return offers[0] if offers else None
-        return min(compatible, key=lambda o: o.total_cost_usd)
+        return min(compatible, key=lambda o: o.quoted_price_usd)
 
     def _find_fastest_offer_for_stage(
         self, stage: TaskStage, offers: list[ProviderOffer], providers: list[ProviderProfile]
@@ -436,7 +461,7 @@ class PlanningAgent:
         
         def speed_score(offer: ProviderOffer) -> float:
             provider = next((p for p in providers if p.id == offer.provider_id), None)
-            gpu_count = offer.gpu_count or 1
+            gpu_count = self._get_resource_count(offer, ResourceType.GPU)
             reliability = provider.reliability_score if provider else 0.9
             return gpu_count * reliability
         
@@ -447,21 +472,22 @@ class PlanningAgent:
     ) -> bool:
         """Check if an offer is compatible with a stage's requirements."""
         if ResourceType.GPU in stage.required_resource_types:
-            if not offer.gpu_count or offer.gpu_count == 0:
-                return False
-        
-        if stage.estimated_memory_gb and offer.gpu_memory_gb:
-            if offer.gpu_memory_gb < stage.estimated_memory_gb * 0.5:
+            gpu_count = self._get_resource_count(offer, ResourceType.GPU)
+            if gpu_count == 0:
                 return False
         
         return True
 
-    def _calculate_stage_cost(self, stage: TaskStage, offer: ProviderOffer) -> float:
+    def _calculate_stage_cost(self, stage: TaskStage, offer: ProviderOffer, providers: list[ProviderProfile] = None) -> float:
         """Calculate cost for executing a stage with a given offer."""
         duration = stage.estimated_duration_hours or 1.0
-        gpu_cost = (offer.gpu_hour_usd or 0) * (offer.gpu_count or 0) * duration
-        cpu_cost = (offer.cpu_hour_usd or 0) * (offer.cpu_count or 0) * duration * 0.1
-        return gpu_cost + cpu_cost + 1.0
+        
+        if hasattr(offer, 'quoted_price_usd') and offer.quoted_price_usd:
+            stage_fraction = 1.0 / 8.0
+            return offer.quoted_price_usd * stage_fraction * (duration / (offer.quoted_duration_hours or 1.0))
+        
+        base_rate = 2.50 if ResourceType.GPU in stage.required_resource_types else 0.10
+        return base_rate * duration
 
     def _score_plan(self, plan: ExecutionPlan, workload: WorkloadSpec, strategy: str) -> float:
         """Score a plan based on how well it meets objectives."""
@@ -474,7 +500,7 @@ class PlanningAgent:
         time_ratio = plan.total_duration_hours / workload.deadline_hours if workload.deadline_hours > 0 else 1.0
         time_score = max(0, 1.0 - time_ratio)
         
-        reliability_score = plan.estimated_reliability
+        reliability_score = plan.reliability_score
         
         if strategy == "cheapest":
             score = 0.6 * cost_score + 0.2 * time_score + 0.2 * reliability_score
@@ -502,11 +528,11 @@ class PlanningAgent:
         return {
             "plans": [
                 {
-                    "name": p.plan.name,
+                    "name": f"{p.plan.plan_type.title()} Plan",
                     "strategy": p.strategy,
                     "cost": p.plan.total_cost_usd,
                     "duration": p.plan.total_duration_hours,
-                    "reliability": p.plan.estimated_reliability,
+                    "reliability": p.plan.reliability_score,
                     "carbon": p.plan.carbon_footprint_kg,
                     "score": p.score,
                     "pros": p.pros,
