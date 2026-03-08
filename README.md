@@ -19,7 +19,7 @@ ComputeExchange solves the complex problem of optimal compute resource allocatio
 5. **Human reviews and approves** the plan with full transparency
 6. **System executes, measures, and learns** from the outcome
 
-This is built as a **real OpenEnv environment** with proper Gymnasium-style APIs (`reset()`, `step()`, `state()`), shaped rewards, and trajectory export for RL post-training.
+This is built as a **real OpenEnv environment** with proper Gymnasium-style APIs (`reset()`, `step()`, `state()`), shaped rewards, and trajectory export for RL post-training. **Phase 7** adds a learning agent that recommends negotiation strategies from episode history; **Phase 8** provides deployment docs and trajectory validation for GRPO/TRL.
 
 ## Architecture
 
@@ -323,11 +323,19 @@ make clean
 
 ## Deployment
 
+See [docs/deployment.md](docs/deployment.md) for the full guide.
+
 ### Docker
 
 ```bash
-docker build -t compute-market-env ./openenv/compute_market_env
-docker run -p 8001:8001 compute-market-env
+make docker-build
+make docker-run
+```
+
+### Trajectory Validation (RL Training)
+
+```bash
+make validate-trajectory
 ```
 
 ### HuggingFace Spaces

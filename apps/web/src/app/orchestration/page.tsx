@@ -54,6 +54,8 @@ export default function OrchestrationPage() {
   const router = useRouter();
   const {
     sessionId,
+    workload,
+    characterization,
     decomposition,
     providers,
     offers,
@@ -102,6 +104,11 @@ export default function OrchestrationPage() {
   );
   const { setError } = useErrorStore();
   useSessionRecovery("orchestration");
+  const [recommendedStrategy, setRecommendedStrategy] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getStrategyRecommendation(workload?.workloadType).then((r) => setRecommendedStrategy(r.strategy)).catch(() => {});
+  }, [workload?.workloadType]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -343,6 +350,11 @@ export default function OrchestrationPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {recommendedStrategy && (
+                    <p className="text-xs text-slate-400 mb-2">
+                      Recommended: <span className="text-blue-400 capitalize">{recommendedStrategy}</span>
+                    </p>
+                  )}
                   <Select
                     value={negotiationStrategy}
                     onValueChange={setNegotiationStrategy}

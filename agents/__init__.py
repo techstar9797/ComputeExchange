@@ -9,6 +9,7 @@ from .workload_characterizer import WorkloadCharacterizer
 from .planner import PlanningAgent
 from .negotiator import NegotiationAgent
 from .provider_agent import ProviderAgent, ProviderMarketplace
+from .learning_agent import LearningAgent, StrategyRecommendation, LearningInsights
 
 __all__ = [
     "WorkloadCharacterizer",
@@ -16,4 +17,7 @@ __all__ = [
     "NegotiationAgent",
     "ProviderAgent",
     "ProviderMarketplace",
+    "LearningAgent",
+    "StrategyRecommendation",
+    "LearningInsights",
 ]

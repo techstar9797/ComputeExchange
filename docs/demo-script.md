@@ -56,6 +56,12 @@ I approve."
 
 "The system executes, compares predicted vs actual metrics, and generates a reward signal. This entire interaction becomes a training trajectory we can use for GRPO post-training."
 
+### 5. Learning & Analytics (Optional)
+
+*Show Analytics → Learning tab*
+
+"Our learning agent analyzes episode history and recommends negotiation strategies by workload type. You can see trends, confidence scores, and actionable tips."
+
 ## OpenEnv Alignment (30 seconds)
 
 "This is built as a real OpenEnv environment:
@@ -85,6 +91,14 @@ Every episode makes the system smarter."
 - [ ] API server running on localhost:8000
 - [ ] OpenEnv server running on localhost:8001
 - [ ] Frontend running on localhost:3000
+- [ ] `make dev` or `make demo` to start all services
 - [ ] Demo scenario pre-loaded
 - [ ] Browser in dark mode
 - [ ] Screen recording ready if needed
+
+## Quick Start
+
+```bash
+make install && make dev
+# Open http://localhost:3000
+```

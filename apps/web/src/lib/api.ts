@@ -196,6 +196,29 @@ class ApiClient {
   async getEpisodeHistory(limit: number = 50): Promise<any> {
     return this.request(`/analytics/history?limit=${limit}`);
   }
+
+  async getStrategyRecommendation(workloadType?: string): Promise<{
+    strategy: string;
+    confidence: number;
+    reasoning: string;
+    alternative?: string;
+  }> {
+    const q = workloadType ? `?workload_type=${workloadType}` : "";
+    return this.request(`/learning/recommend${q}`);
+  }
+
+  async getLearningInsights(workloadType?: string): Promise<{
+    recommended_strategy: string;
+    confidence: number;
+    reasoning: string;
+    alternative?: string;
+    avg_reward_trend: string;
+    best_workload_type: string | null;
+    tips: string[];
+  }> {
+    const q = workloadType ? `?workload_type=${workloadType}` : "";
+    return this.request(`/learning/insights${q}`);
+  }
 }
 
 export const api = new ApiClient();

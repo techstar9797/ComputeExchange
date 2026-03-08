@@ -79,6 +79,7 @@ if _agents_path not in sys.path:
 from workload_characterizer import WorkloadCharacterizer
 from planner import PlanningAgent
 from negotiator import NegotiationAgent
+from learning_agent import LearningAgent
 
 
 # =============================================================================
@@ -97,6 +98,7 @@ class AppState:
         
         self.characterizer = WorkloadCharacterizer()
         self.planner = PlanningAgent()
+        self.learning_agent = LearningAgent()
         self.negotiators: dict[str, NegotiationAgent] = {}
         
         self.characterization_cache: dict[str, dict] = {}
@@ -715,6 +717,45 @@ async def get_episode_history(limit: int = 50):
     """Get recent episode history."""
     history = app_state.episode_history[-limit:]
     return {"episodes": [e.model_dump() for e in history]}
+
+
+@app.get("/learning/recommend")
+async def get_strategy_recommendation(workload_type: Optional[str] = None):
+    """Get recommended negotiation strategy based on episode history."""
+    wt = None
+    if workload_type:
+        try:
+            wt = WorkloadType(workload_type)
+        except ValueError:
+            wt = WorkloadType.LLM_TRAINING
+    rec = app_state.learning_agent.recommend_strategy(wt, app_state.episode_history)
+    return {
+        "strategy": rec.strategy.value,
+        "confidence": rec.confidence,
+        "reasoning": rec.reasoning,
+        "alternative": rec.alternative.value if rec.alternative else None,
+    }
+
+
+@app.get("/learning/insights")
+async def get_learning_insights(workload_type: Optional[str] = None):
+    """Get learning insights including strategy recommendation and tips."""
+    wt = None
+    if workload_type:
+        try:
+            wt = WorkloadType(workload_type)
+        except ValueError:
+            wt = WorkloadType.LLM_TRAINING
+    insights = app_state.learning_agent.get_insights(wt, app_state.episode_history)
+    return {
+        "recommended_strategy": insights.recommended_strategy.strategy.value,
+        "confidence": insights.recommended_strategy.confidence,
+        "reasoning": insights.recommended_strategy.reasoning,
+        "alternative": insights.recommended_strategy.alternative.value if insights.recommended_strategy.alternative else None,
+        "avg_reward_trend": insights.avg_reward_trend,
+        "best_workload_type": insights.best_workload_type,
+        "tips": insights.tips,
+    }
 
 
 @app.get("/trajectory/export")

@@ -55,6 +55,15 @@ interface Episode {
 export default function AnalyticsPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [insights, setInsights] = useState<{
+    recommended_strategy: string;
+    confidence: number;
+    reasoning: string;
+    alternative?: string;
+    avg_reward_trend: string;
+    best_workload_type: string | null;
+    tips: string[];
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { setError } = useErrorStore();
 
@@ -65,12 +74,14 @@ export default function AnalyticsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [metricsData, historyData] = await Promise.all([
+      const [metricsData, historyData, insightsData] = await Promise.all([
         api.getAnalytics(),
         api.getEpisodeHistory(20),
+        api.getLearningInsights().catch(() => null),
       ]);
       setMetrics(metricsData);
       setEpisodes(historyData.episodes || []);
+      setInsights(insightsData);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to load analytics");
     } finally {
@@ -376,35 +387,47 @@ export default function AnalyticsPage() {
                     <div className="p-4 rounded-lg bg-slate-800/50">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-slate-400">Reward Trend</span>
-                        <span className="text-green-400 flex items-center gap-1">
-                          <TrendingUp className="w-4 h-4" />
-                          Improving
+                        <span className={`flex items-center gap-1 ${
+                          insights?.avg_reward_trend === "improving" ? "text-green-400" :
+                          insights?.avg_reward_trend === "declining" ? "text-red-400" : "text-slate-400"
+                        }`}>
+                          {insights?.avg_reward_trend === "improving" && <TrendingUp className="w-4 h-4" />}
+                          {insights?.avg_reward_trend === "declining" && <TrendingDown className="w-4 h-4" />}
+                          {insights?.avg_reward_trend?.charAt(0).toUpperCase() || "Calibrating"}
                         </span>
                       </div>
                       <p className="text-xs text-slate-500">
-                        System is learning from past episodes and improving plan quality
+                        {insights ? `Based on ${episodes.length} episodes. ${insights.reasoning}` : "Run episodes to see trends"}
                       </p>
                     </div>
 
                     <div className="p-4 rounded-lg bg-slate-800/50">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-400">Prediction Accuracy</span>
-                        <span className="text-white">Calibrating</span>
+                        <span className="text-slate-400">Recommended Strategy</span>
+                        <Badge className="bg-blue-500/20 text-blue-400 capitalize">
+                          {insights?.recommended_strategy || "balanced"}
+                        </Badge>
                       </div>
-                      <p className="text-xs text-slate-500">
-                        Cost and duration predictions are being refined with each execution
+                      <p className="text-xs text-slate-500 mb-2">
+                        Confidence: {insights ? `${(insights.confidence * 100).toFixed(0)}%` : "N/A"}
                       </p>
+                      {insights?.alternative && (
+                        <p className="text-xs text-slate-400">
+                          Alternative: {insights.alternative}
+                        </p>
+                      )}
                     </div>
 
-                    <div className="p-4 rounded-lg bg-slate-800/50">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-slate-400">Negotiation Efficiency</span>
-                        <span className="text-blue-400">Optimizing</span>
+                    {insights?.tips && insights.tips.length > 0 && (
+                      <div className="p-4 rounded-lg bg-slate-800/50">
+                        <div className="text-slate-400 text-sm font-medium mb-2">Tips</div>
+                        <ul className="text-xs text-slate-500 space-y-1">
+                          {insights.tips.map((tip, i) => (
+                            <li key={i}>• {tip}</li>
+                          ))}
+                        </ul>
                       </div>
-                      <p className="text-xs text-slate-500">
-                        Learning provider behaviors and optimal counter-offer strategies
-                      </p>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
 

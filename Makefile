@@ -40,6 +40,9 @@ test:
 test-env:
 	cd openenv/compute_market_env && pytest tests/ -v --cov=server
 
+validate-trajectory:
+	python scripts/validate_trajectory_export.py --no-http
+
 # Linting
 lint:
 	npm run lint
@@ -95,3 +98,4 @@ help:
 	@echo "  make clean       - Clean build artifacts"
 	@echo "  make docker-build - Build Docker image for OpenEnv"
 	@echo "  make demo        - Start demo mode"
+	@echo "  make validate-trajectory - Validate RL trajectory export schema"
