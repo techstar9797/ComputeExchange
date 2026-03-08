@@ -93,6 +93,7 @@ class AppState:
         self.scenario_gen = ScenarioGenerator()
         self.episode_history: list[EpisodeResult] = []
         self.active_websockets: list[WebSocket] = []
+        self.session_websockets: dict[str, list[WebSocket]] = {}
         
         self.characterizer = WorkloadCharacterizer()
         self.planner = PlanningAgent()
@@ -123,6 +124,23 @@ class AppState:
             del self.characterization_cache[session_id]
         if session_id in self.plan_cache:
             del self.plan_cache[session_id]
+        if session_id in self.session_websockets:
+            del self.session_websockets[session_id]
+
+    async def broadcast_to_session(self, session_id: str, message: dict) -> None:
+        """Push a message to all WebSocket clients subscribed to this session."""
+        sockets = self.session_websockets.get(session_id, [])
+        dead = []
+        for ws in sockets:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            if session_id in self.session_websockets:
+                self.session_websockets[session_id] = [
+                    s for s in self.session_websockets[session_id] if s != ws
+                ]
 
 
 app_state = AppState()
@@ -361,6 +379,11 @@ async def submit_workload(request: WorkloadSubmissionRequest, background_tasks: 
         "hints": obs.hints,
     }
 
+    await app_state.broadcast_to_session(session_id, {
+        "type": "state",
+        "data": env.state.model_dump(),
+    })
+
 
 @app.post("/session/{session_id}/negotiate")
 async def start_negotiation(session_id: str, config: NegotiationConfig):
@@ -386,7 +409,7 @@ async def start_negotiation(session_id: str, config: NegotiationConfig):
     )
     obs = env.step(action)
     
-    return {
+    result = {
         "status": "negotiating",
         "phase": env.state.phase,
         "strategy": config.strategy.value,
@@ -395,6 +418,11 @@ async def start_negotiation(session_id: str, config: NegotiationConfig):
         "reward": obs.reward,
         "hints": obs.hints,
     }
+    await app_state.broadcast_to_session(session_id, {
+        "type": "state",
+        "data": env.state.model_dump(),
+    })
+    return result
 
 
 @app.post("/session/{session_id}/counter-offer")
@@ -455,6 +483,11 @@ async def generate_plans(request: PlanGenerationRequest):
     
     # Generate comparison data
     comparison = app_state.planner.compare_plans(plan_candidates, workload)
+
+    await app_state.broadcast_to_session(request.session_id, {
+        "type": "state",
+        "data": env.state.model_dump(),
+    })
     
     return {
         "status": "plans_generated",
@@ -762,7 +795,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     """WebSocket for real-time environment updates."""
     await websocket.accept()
     app_state.active_websockets.append(websocket)
-    
+    if session_id not in app_state.session_websockets:
+        app_state.session_websockets[session_id] = []
+    app_state.session_websockets[session_id].append(websocket)
+
     env = app_state.get_or_create_env(session_id)
     
     try:
@@ -819,6 +855,10 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     
     except WebSocketDisconnect:
         app_state.active_websockets.remove(websocket)
+        if session_id in app_state.session_websockets:
+            app_state.session_websockets[session_id] = [
+                s for s in app_state.session_websockets[session_id] if s != websocket
+            ]
     except Exception as e:
         await websocket.send_json({
             "type": "error",

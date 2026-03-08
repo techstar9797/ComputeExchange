@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -11,19 +11,21 @@ import {
   Cpu,
   Brain,
   Zap,
-  TrendingDown,
   Shield,
   Leaf,
   Clock,
   DollarSign,
   CheckCircle,
-  XCircle,
   MessageSquare,
   Users,
   BarChart3,
   Activity,
   Target,
+  Wifi,
+  WifiOff,
+  Loader2,
 } from "lucide-react";
+import { useOrchestrationWebSocket } from "@/hooks/useOrchestrationWebSocket";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +58,7 @@ export default function OrchestrationPage() {
     negotiationRound,
     negotiationStrategy,
     plans,
+    serverPhase,
     setProviders,
     setOffers,
     setNegotiationRound,
@@ -63,12 +66,38 @@ export default function OrchestrationPage() {
     setPlans,
     setSelectedPlanId,
     setPhase,
+    syncFromServerState,
   } = useAppStore();
 
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [isGeneratingPlans, setIsGeneratingPlans] = useState(false);
-  const [negotiationLog, setNegotiationLog] = useState<string[]>([]);
+  const [negotiationLog, setNegotiationLog] = useState<{ time: string; message: string }[]>([]);
   const [currentPhase, setCurrentPhase] = useState<"characterization" | "negotiation" | "planning">("characterization");
+
+  const addLog = useCallback((message: string) => {
+    setNegotiationLog((prev) => [
+      ...prev,
+      { time: new Date().toLocaleTimeString(), message },
+    ]);
+  }, []);
+
+  const handleStateUpdate = useCallback(
+    (state: { phase?: string; providers?: any[]; negotiation?: { offers?: any[] }; decomposition?: any; plans?: any[] }) => {
+      syncFromServerState({
+        phase: state.phase,
+        providers: state.providers,
+        offers: state.negotiation?.offers,
+        decomposition: state.decomposition,
+        plans: state.plans,
+      });
+    },
+    [syncFromServerState]
+  );
+
+  const { connectionStatus, refreshState } = useOrchestrationWebSocket(
+    sessionId,
+    handleStateUpdate
+  );
 
   useEffect(() => {
     if (!sessionId) {
@@ -76,11 +105,16 @@ export default function OrchestrationPage() {
     }
   }, [sessionId, router]);
 
+  useEffect(() => {
+    const phase = serverPhase || (decomposition ? (offers.length > 0 ? (plans.length > 0 ? "planning" : "negotiation") : "characterization") : "characterization");
+    setCurrentPhase(phase === "planning" ? "planning" : phase === "negotiation" ? "negotiation" : "characterization");
+  }, [serverPhase, decomposition, offers.length, plans.length]);
+
   const handleStartNegotiation = async () => {
     if (!sessionId) return;
     
     setIsNegotiating(true);
-    setNegotiationLog((prev) => [...prev, `Starting negotiation with ${negotiationStrategy} strategy...`]);
+    addLog(`Starting negotiation with ${negotiationStrategy} strategy...`);
 
     try {
       const result = await api.startNegotiation(sessionId, negotiationStrategy);
@@ -89,13 +123,11 @@ export default function OrchestrationPage() {
       setNegotiationRound(result.round || 1);
       setCurrentPhase("negotiation");
       
-      setNegotiationLog((prev) => [
-        ...prev,
-        `Received ${result.offers?.length || 0} offers from providers`,
-        `Negotiation round: ${result.round || 1}`,
-      ]);
+      addLog(`Received ${result.offers?.length || 0} offers from providers`);
+      addLog(`Negotiation round: ${result.round || 1}`);
+      refreshState();
     } catch (error) {
-      setNegotiationLog((prev) => [...prev, `Error: ${error}`]);
+      addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsNegotiating(false);
     }
@@ -105,19 +137,17 @@ export default function OrchestrationPage() {
     if (!sessionId) return;
 
     setIsGeneratingPlans(true);
-    setNegotiationLog((prev) => [...prev, "Generating execution plans..."]);
+    addLog("Generating execution plans...");
 
     try {
       const result = await api.generatePlans(sessionId);
       setPlans(result.plans || []);
       setCurrentPhase("planning");
       
-      setNegotiationLog((prev) => [
-        ...prev,
-        `Generated ${result.plans?.length || 0} execution plans`,
-      ]);
+      addLog(`Generated ${result.plans?.length || 0} execution plans`);
+      refreshState();
     } catch (error) {
-      setNegotiationLog((prev) => [...prev, `Error: ${error}`]);
+      addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsGeneratingPlans(false);
     }
@@ -154,12 +184,41 @@ export default function OrchestrationPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-8 flex items-start justify-between"
         >
-          <h1 className="text-3xl font-bold text-white mb-2">Marketplace Orchestration</h1>
-          <p className="text-slate-400">
-            Multi-agent negotiation and plan generation in progress
-          </p>
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Marketplace Orchestration</h1>
+            <p className="text-slate-400">
+              Multi-agent negotiation and plan generation in progress
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`gap-1.5 ${
+                connectionStatus === "connected"
+                  ? "border-green-500/30 text-green-400 bg-green-500/10"
+                  : connectionStatus === "connecting"
+                  ? "border-amber-500/30 text-amber-400 bg-amber-500/10"
+                  : "border-slate-500/30 text-slate-500"
+              }`}
+            >
+              {connectionStatus === "connected" ? (
+                <Wifi className="w-3.5 h-3.5" />
+              ) : connectionStatus === "connecting" ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <WifiOff className="w-3.5 h-3.5" />
+              )}
+              <span className="text-xs font-medium">
+                {connectionStatus === "connected"
+                  ? "Live"
+                  : connectionStatus === "connecting"
+                  ? "Connecting..."
+                  : "Offline"}
+              </span>
+            </Badge>
+          </div>
         </motion.div>
 
         {/* Phase Progress */}
@@ -388,6 +447,15 @@ export default function OrchestrationPage() {
                           </div>
                         </motion.div>
                       ))
+                    ) : isNegotiating ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className="h-20 rounded-lg bg-slate-800/50 animate-pulse border border-white/5"
+                          />
+                        ))}
+                      </div>
                     ) : (
                       <div className="text-center py-8 text-slate-500">
                         <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -436,8 +504,7 @@ export default function OrchestrationPage() {
                   <div className="h-32 overflow-y-auto space-y-1 font-mono text-xs">
                     {negotiationLog.map((log, i) => (
                       <div key={i} className="text-slate-400">
-                        <span className="text-slate-600">[{new Date().toLocaleTimeString()}]</span>{" "}
-                        {log}
+                        <span className="text-slate-600">[{log.time}]</span> {log.message}
                       </div>
                     ))}
                     {negotiationLog.length === 0 && (
@@ -521,6 +588,15 @@ export default function OrchestrationPage() {
                           />
                         </motion.div>
                       ))
+                    ) : isGeneratingPlans ? (
+                      <div className="space-y-3">
+                        {[1, 2, 3, 4].map((i) => (
+                          <div
+                            key={i}
+                            className="h-24 rounded-lg bg-slate-800/50 animate-pulse border border-white/5"
+                          />
+                        ))}
+                      </div>
                     ) : (
                       <div className="text-center py-8 text-slate-500">
                         <BarChart3 className="w-8 h-8 mx-auto mb-2 opacity-50" />

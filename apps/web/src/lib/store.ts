@@ -58,6 +58,7 @@ interface AppStore {
   // Session
   sessionId: string | null;
   phase: AppPhase;
+  serverPhase: string | null;
   
   // Workload
   workload: WorkloadState;
@@ -98,6 +99,14 @@ interface AppStore {
   setSelectedPlanId: (id: string | null) => void;
   setExecution: (execution: any) => void;
   setEpisodeReward: (reward: number, breakdown?: Record<string, number>) => void;
+  syncFromServerState: (state: {
+    phase?: string;
+    providers?: any[];
+    offers?: any[];
+    plans?: any[];
+    decomposition?: any;
+    negotiation?: { offers?: any[] };
+  }) => void;
   reset: () => void;
 }
 
@@ -122,6 +131,7 @@ const initialWorkload: WorkloadState = {
 export const useAppStore = create<AppStore>((set) => ({
   sessionId: null,
   phase: "landing",
+  serverPhase: null,
   workload: initialWorkload,
   decomposition: null,
   characterization: null,
@@ -154,10 +164,32 @@ export const useAppStore = create<AppStore>((set) => ({
   setExecution: (execution) => set({ execution }),
   setEpisodeReward: (reward, breakdown = {}) =>
     set({ episodeReward: reward, rewardBreakdown: breakdown }),
+  syncFromServerState: (state) =>
+    set((s) => {
+      const offers = state.offers ?? state.negotiation?.offers ?? s.offers;
+      const next: Partial<AppStore> = {};
+      if (state.phase) next.serverPhase = state.phase;
+      if (state.providers) next.providers = state.providers;
+      if (offers && offers !== s.offers) next.offers = offers;
+      if (state.decomposition) next.decomposition = state.decomposition;
+      if (state.plans && state.plans.length > 0) {
+        next.plans = state.plans.map((p: any) => ({
+          id: p.id,
+          plan_type: p.plan_type || "balanced",
+          total_cost_usd: p.total_cost_usd ?? 0,
+          total_duration_hours: p.total_duration_hours ?? 0,
+          reliability_score: p.reliability_score ?? 0.9,
+          carbon_footprint_kg: p.carbon_footprint_kg ?? 0,
+          optimization_score: p.optimization_score ?? 0.5,
+        }));
+      }
+      return next;
+    }),
   reset: () =>
     set({
       sessionId: null,
       phase: "landing",
+      serverPhase: null,
       workload: initialWorkload,
       decomposition: null,
       characterization: null,
