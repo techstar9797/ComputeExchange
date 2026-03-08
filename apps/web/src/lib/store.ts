@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type AppPhase =
   | "landing"
@@ -107,6 +108,16 @@ interface AppStore {
     decomposition?: any;
     negotiation?: { offers?: any[] };
   }) => void;
+  restoreFromServerState: (state: {
+    phase?: string;
+    decomposition?: any;
+    offers?: any[];
+    plans?: any[];
+    execution?: any;
+    episode_reward?: number;
+    selected_plan?: any;
+    workload?: any;
+  }) => void;
   reset: () => void;
 }
 
@@ -128,7 +139,9 @@ const initialWorkload: WorkloadState = {
   allowHeterogeneousPlan: true,
 };
 
-export const useAppStore = create<AppStore>((set) => ({
+export const useAppStore = create<AppStore>()(
+  persist(
+    (set) => ({
   sessionId: null,
   phase: "landing",
   serverPhase: null,
@@ -185,6 +198,40 @@ export const useAppStore = create<AppStore>((set) => ({
       }
       return next;
     }),
+  restoreFromServerState: (state) =>
+    set((s) => {
+      const next: Partial<AppStore> = {};
+      if (state.phase) next.serverPhase = state.phase;
+      if (state.decomposition) next.decomposition = state.decomposition;
+      if (state.offers?.length) next.offers = state.offers;
+      if (state.execution) next.execution = state.execution;
+      if (state.episode_reward != null) next.episodeReward = state.episode_reward;
+      if (state.selected_plan) next.selectedPlanId = state.selected_plan?.id ?? s.selectedPlanId;
+      if (state.workload) {
+        const w = state.workload;
+        next.workload = {
+          ...s.workload,
+          name: w.name ?? s.workload.name,
+          workloadType: w.workload_type ?? s.workload.workloadType,
+          modelSizeGb: w.model_size_gb ?? s.workload.modelSizeGb,
+          dataSizeGb: w.data_size_gb ?? s.workload.dataSizeGb,
+          deadlineHours: w.deadline_hours ?? s.workload.deadlineHours,
+          budgetUsd: w.budget_usd ?? s.workload.budgetUsd,
+        };
+      }
+      if (state.plans?.length) {
+        next.plans = state.plans.map((p: any) => ({
+          id: p.id,
+          plan_type: p.plan_type || "balanced",
+          total_cost_usd: p.total_cost_usd ?? 0,
+          total_duration_hours: p.total_duration_hours ?? 0,
+          reliability_score: p.reliability_score ?? 0.9,
+          carbon_footprint_kg: p.carbon_footprint_kg ?? 0,
+          optimization_score: p.optimization_score ?? 0.5,
+        }));
+      }
+      return next;
+    }),
   reset: () =>
     set({
       sessionId: null,
@@ -206,4 +253,10 @@ export const useAppStore = create<AppStore>((set) => ({
       episodeReward: 0,
       rewardBreakdown: {},
     }),
-}));
+    }),
+    {
+      name: "compute-exchange-session",
+      partialize: (s) => ({ sessionId: s.sessionId }),
+    }
+  )
+);

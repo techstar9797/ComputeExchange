@@ -28,6 +28,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { useErrorStore } from "@/lib/error-store";
+import { useSessionRecovery } from "@/hooks/useSessionRecovery";
 
 export default function ApprovalPage() {
   const router = useRouter();
@@ -44,6 +46,8 @@ export default function ApprovalPage() {
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const { setError } = useErrorStore();
+  useSessionRecovery("approval");
 
   const selectedPlan = plans.find((p: any) => p.id === selectedPlanId);
 
@@ -75,7 +79,7 @@ export default function ApprovalPage() {
       setPhase("execution");
       router.push("/execution");
     } catch (error) {
-      console.error("Approval failed:", error);
+      setError(error instanceof Error ? error.message : "Approval failed");
     } finally {
       setIsApproving(false);
     }
@@ -91,7 +95,7 @@ export default function ApprovalPage() {
       setPhase("orchestration");
       router.push("/orchestration");
     } catch (error) {
-      console.error("Rejection failed:", error);
+      setError(error instanceof Error ? error.message : "Rejection failed");
     } finally {
       setIsRejecting(false);
     }

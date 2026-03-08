@@ -62,8 +62,17 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.detail || `API error: ${response.status}`);
+      const body = await response.json().catch(() => ({}));
+      const detail = body.detail;
+      let message = `Request failed (${response.status})`;
+      if (typeof detail === "string") {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        message = detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join("; ");
+      } else if (detail && typeof detail === "object" && "msg" in detail) {
+        message = (detail as { msg: string }).msg;
+      }
+      throw new Error(message);
     }
 
     return response.json();

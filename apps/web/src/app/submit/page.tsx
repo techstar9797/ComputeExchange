@@ -34,6 +34,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { useErrorStore } from "@/lib/error-store";
 
 const workloadTypes = [
   { value: "llm_training", label: "LLM Training", icon: Brain },
@@ -65,6 +66,7 @@ const complianceOptions = [
 export default function SubmitWorkloadPage() {
   const router = useRouter();
   const { workload, setWorkload, setPhase, setSessionId, setDecomposition, setCharacterization } = useAppStore();
+  const { setError } = useErrorStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(["us-west-2"]);
   const [selectedCompliance, setSelectedCompliance] = useState<string[]>([]);
@@ -106,7 +108,7 @@ export default function SubmitWorkloadPage() {
       setPhase("orchestration");
       router.push("/orchestration");
     } catch (error) {
-      console.error("Failed to submit workload:", error);
+      setError(error instanceof Error ? error.message : "Failed to submit workload");
     } finally {
       setIsSubmitting(false);
     }

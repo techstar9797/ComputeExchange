@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
+import { useSessionRecovery } from "@/hooks/useSessionRecovery";
 
 export default function ExecutionPage() {
   const router = useRouter();
@@ -41,6 +42,7 @@ export default function ExecutionPage() {
   } = useAppStore();
 
   const selectedPlan = plans.find((p: any) => p.id === selectedPlanId);
+  useSessionRecovery("execution");
 
   useEffect(() => {
     if (!sessionId || !execution) {

@@ -26,6 +26,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useOrchestrationWebSocket } from "@/hooks/useOrchestrationWebSocket";
+import { useSessionRecovery } from "@/hooks/useSessionRecovery";
+import { useErrorStore } from "@/lib/error-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +100,8 @@ export default function OrchestrationPage() {
     sessionId,
     handleStateUpdate
   );
+  const { setError } = useErrorStore();
+  useSessionRecovery("orchestration");
 
   useEffect(() => {
     if (!sessionId) {
@@ -127,7 +131,9 @@ export default function OrchestrationPage() {
       addLog(`Negotiation round: ${result.round || 1}`);
       refreshState();
     } catch (error) {
-      addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      addLog(`Error: ${msg}`);
+      setError(msg);
     } finally {
       setIsNegotiating(false);
     }
@@ -147,7 +153,9 @@ export default function OrchestrationPage() {
       addLog(`Generated ${result.plans?.length || 0} execution plans`);
       refreshState();
     } catch (error) {
-      addLog(`Error: ${error instanceof Error ? error.message : String(error)}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      addLog(`Error: ${msg}`);
+      setError(msg);
     } finally {
       setIsGeneratingPlans(false);
     }

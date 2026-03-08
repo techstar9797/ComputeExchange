@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/lib/api";
+import { useErrorStore } from "@/lib/error-store";
 
 interface Metrics {
   total_episodes: number;
@@ -55,6 +56,7 @@ export default function AnalyticsPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { setError } = useErrorStore();
 
   useEffect(() => {
     loadData();
@@ -70,7 +72,7 @@ export default function AnalyticsPage() {
       setMetrics(metricsData);
       setEpisodes(historyData.episodes || []);
     } catch (error) {
-      console.error("Failed to load analytics:", error);
+      setError(error instanceof Error ? error.message : "Failed to load analytics");
     } finally {
       setIsLoading(false);
     }
