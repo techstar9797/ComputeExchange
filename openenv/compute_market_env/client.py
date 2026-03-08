@@ -36,7 +36,7 @@ except ImportError:
             self.reward = reward
             self.done = done
 
-from .models import (
+from .types_export import (
     ComputeMarketAction,
     ComputeMarketObservation,
     CharacterizeWorkloadAction,

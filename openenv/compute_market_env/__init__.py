@@ -14,7 +14,7 @@ This environment supports:
 - Trajectory export for post-training (GRPO, TorchForge)
 """
 
-from .models import (
+from .types_export import (
     ComputeMarketAction,
     ComputeMarketObservation,
     ComputeMarketState,

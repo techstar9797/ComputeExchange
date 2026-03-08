@@ -13,12 +13,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional
 from uuid import uuid4
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "packages" / "shared-types"))
-
-from models import (
+from .shared_models import (
     ExecutionPlan,
     ExecutionStageStatus,
     ExecutionState,

@@ -18,21 +18,51 @@ from pydantic import BaseModel, Field
 
 import sys
 from pathlib import Path
+import importlib.util
 
-# Add shared types to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "packages" / "shared-types"))
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "openenv" / "compute_market_env"))
+# Load shared models using importlib to avoid naming collisions
+_models_path = Path(__file__).parent.parent.parent / "packages" / "shared-types" / "models.py"
+_spec = importlib.util.spec_from_file_location("shared_types_models", _models_path)
+_shared_models = importlib.util.module_from_spec(_spec)
+_shared_models.__dict__['Optional'] = Optional
+_shared_models.__dict__['Any'] = Any
+_shared_models.__dict__['datetime'] = datetime
+from uuid import uuid4 as _uuid4
+_shared_models.__dict__['uuid4'] = _uuid4
+_spec.loader.exec_module(_shared_models)
 
-from models import (
-    WorkloadSpec,
-    WorkloadType,
-    OptimizationWeights,
-    ProviderProfile,
-    ExecutionPlan,
-    NegotiationStrategy,
-    ApprovalDecision,
-    EpisodeResult,
-)
+# Rebuild models to resolve forward references
+for _name in dir(_shared_models):
+    _obj = getattr(_shared_models, _name)
+    if hasattr(_obj, 'model_rebuild'):
+        try:
+            _obj.model_rebuild()
+        except Exception:
+            pass
+
+# Import models from the loaded module
+WorkloadSpec = _shared_models.WorkloadSpec
+WorkloadType = _shared_models.WorkloadType
+OptimizationWeights = _shared_models.OptimizationWeights
+ProviderProfile = _shared_models.ProviderProfile
+ExecutionPlan = _shared_models.ExecutionPlan
+NegotiationStrategy = _shared_models.NegotiationStrategy
+ApprovalDecision = _shared_models.ApprovalDecision
+EpisodeResult = _shared_models.EpisodeResult
+CharacterizeWorkloadAction = _shared_models.CharacterizeWorkloadAction
+RequestQuotesAction = _shared_models.RequestQuotesAction
+GeneratePlanAction = _shared_models.GeneratePlanAction
+SubmitForApprovalAction = _shared_models.SubmitForApprovalAction
+ApprovePlanAction = _shared_models.ApprovePlanAction
+ExecutePlanAction = _shared_models.ExecutePlanAction
+FinalizeEpisodeAction = _shared_models.FinalizeEpisodeAction
+SwitchStrategyAction = _shared_models.SwitchStrategyAction
+CounterOfferAction = _shared_models.CounterOfferAction
+
+# Add openenv path for importing server modules
+_openenv_server_path = str(Path(__file__).parent.parent.parent / "openenv" / "compute_market_env")
+if _openenv_server_path not in sys.path:
+    sys.path.insert(0, _openenv_server_path)
 
 from server.environment import ComputeMarketEnvironment
 from server.scenario_generator import ScenarioGenerator

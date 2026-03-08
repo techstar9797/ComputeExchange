@@ -36,12 +36,7 @@ except ImportError:
     class Environment:
         pass
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "packages" / "shared-types"))
-
-from models import (
+from .shared_models import (
     ApprovalDecision,
     ComputeMarketAction,
     ComputeMarketObservation,

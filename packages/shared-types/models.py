@@ -8,8 +8,6 @@ These Pydantic models define the data contracts between all components:
 - Training ↔ Trajectory storage
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
@@ -107,6 +105,28 @@ class TaskStageType(str, Enum):
 # =============================================================================
 
 
+class OptimizationWeights(BaseModel):
+    """Weights for multi-objective optimization."""
+    cost: float = Field(0.3, ge=0.0, le=1.0)
+    latency: float = Field(0.25, ge=0.0, le=1.0)
+    throughput: float = Field(0.15, ge=0.0, le=1.0)
+    energy: float = Field(0.1, ge=0.0, le=1.0)
+    reliability: float = Field(0.2, ge=0.0, le=1.0)
+    
+    def normalize(self) -> "OptimizationWeights":
+        """Normalize weights to sum to 1."""
+        total = self.cost + self.latency + self.throughput + self.energy + self.reliability
+        if total == 0:
+            return OptimizationWeights()
+        return OptimizationWeights(
+            cost=self.cost / total,
+            latency=self.latency / total,
+            throughput=self.throughput / total,
+            energy=self.energy / total,
+            reliability=self.reliability / total,
+        )
+
+
 class WorkloadSpec(BaseModel):
     """Specification of a compute workload submitted by an enterprise."""
     id: str = Field(default_factory=lambda: str(uuid4()))
@@ -131,28 +151,6 @@ class WorkloadSpec(BaseModel):
     
     submitted_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class OptimizationWeights(BaseModel):
-    """Weights for multi-objective optimization."""
-    cost: float = Field(0.3, ge=0.0, le=1.0)
-    latency: float = Field(0.25, ge=0.0, le=1.0)
-    throughput: float = Field(0.15, ge=0.0, le=1.0)
-    energy: float = Field(0.1, ge=0.0, le=1.0)
-    reliability: float = Field(0.2, ge=0.0, le=1.0)
-    
-    def normalize(self) -> OptimizationWeights:
-        """Normalize weights to sum to 1."""
-        total = self.cost + self.latency + self.throughput + self.energy + self.reliability
-        if total == 0:
-            return OptimizationWeights()
-        return OptimizationWeights(
-            cost=self.cost / total,
-            latency=self.latency / total,
-            throughput=self.throughput / total,
-            energy=self.energy / total,
-            reliability=self.reliability / total,
-        )
 
 
 class TaskStage(BaseModel):

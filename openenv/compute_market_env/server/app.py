@@ -15,12 +15,7 @@ from pydantic import BaseModel
 
 from .environment import ComputeMarketEnvironment
 
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "packages" / "shared-types"))
-
-from models import ComputeMarketObservation, ComputeMarketState
+from .shared_models import ComputeMarketObservation, ComputeMarketState
 
 
 # Global environment instance
@@ -133,7 +128,7 @@ async def health_check():
 @app.get("/schema", response_model=SchemaResponse)
 async def get_schema():
     """Get environment action/observation schemas."""
-    from models import ComputeMarketAction, ComputeMarketObservation, ComputeMarketState
+    from .shared_models import ComputeMarketAction, ComputeMarketObservation, ComputeMarketState
     
     return SchemaResponse(
         action=ComputeMarketAction.model_json_schema(),
@@ -177,7 +172,7 @@ async def step_environment(request: StepRequest):
         raise HTTPException(status_code=500, detail="Environment not initialized")
     
     # Create action from dict
-    from models import ComputeMarketAction
+    from .shared_models import ComputeMarketAction
     
     class DynamicAction(ComputeMarketAction):
         class Config:
@@ -259,7 +254,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 })
             
             elif msg_type == "step":
-                from models import ComputeMarketAction
+                from .shared_models import ComputeMarketAction
                 
                 class DynamicAction(ComputeMarketAction):
                     class Config:
