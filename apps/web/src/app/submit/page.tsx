@@ -64,7 +64,7 @@ const complianceOptions = [
 
 export default function SubmitWorkloadPage() {
   const router = useRouter();
-  const { workload, setWorkload, setPhase, setSessionId, setDecomposition, setProviders } = useAppStore();
+  const { workload, setWorkload, setPhase, setSessionId, setDecomposition, setCharacterization } = useAppStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedRegions, setSelectedRegions] = useState<string[]>(["us-west-2"]);
   const [selectedCompliance, setSelectedCompliance] = useState<string[]>([]);
@@ -100,6 +100,9 @@ export default function SubmitWorkloadPage() {
 
       setSessionId(result.session_id);
       setDecomposition(result.decomposition);
+      if (result.characterization && result.stages) {
+        setCharacterization(result.characterization, result.stages);
+      }
       setPhase("orchestration");
       router.push("/orchestration");
     } catch (error) {

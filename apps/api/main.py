@@ -67,6 +67,15 @@ if _openenv_server_path not in sys.path:
 from server.environment import ComputeMarketEnvironment
 from server.scenario_generator import ScenarioGenerator
 
+# Add agents path
+_agents_path = str(Path(__file__).parent.parent.parent / "agents")
+if _agents_path not in sys.path:
+    sys.path.insert(0, _agents_path)
+
+from workload_characterizer import WorkloadCharacterizer
+from planner import PlanningAgent
+from negotiator import NegotiationAgent
+
 
 # =============================================================================
 # State Management
@@ -80,6 +89,13 @@ class AppState:
         self.scenario_gen = ScenarioGenerator()
         self.episode_history: list[EpisodeResult] = []
         self.active_websockets: list[WebSocket] = []
+        
+        self.characterizer = WorkloadCharacterizer()
+        self.planner = PlanningAgent()
+        self.negotiators: dict[str, NegotiationAgent] = {}
+        
+        self.characterization_cache: dict[str, dict] = {}
+        self.plan_cache: dict[str, list] = {}
     
     def get_or_create_env(self, session_id: str) -> ComputeMarketEnvironment:
         """Get or create an environment for a session."""
@@ -87,10 +103,22 @@ class AppState:
             self.environments[session_id] = ComputeMarketEnvironment()
         return self.environments[session_id]
     
+    def get_or_create_negotiator(self, session_id: str, strategy: NegotiationStrategy = NegotiationStrategy.BALANCED) -> NegotiationAgent:
+        """Get or create a negotiation agent for a session."""
+        if session_id not in self.negotiators:
+            self.negotiators[session_id] = NegotiationAgent(strategy=strategy)
+        return self.negotiators[session_id]
+    
     def remove_env(self, session_id: str) -> None:
-        """Remove an environment."""
+        """Remove an environment and associated state."""
         if session_id in self.environments:
             del self.environments[session_id]
+        if session_id in self.negotiators:
+            del self.negotiators[session_id]
+        if session_id in self.characterization_cache:
+            del self.characterization_cache[session_id]
+        if session_id in self.plan_cache:
+            del self.plan_cache[session_id]
 
 
 app_state = AppState()
@@ -288,8 +316,14 @@ async def submit_workload(request: WorkloadSubmissionRequest, background_tasks: 
         min_reliability_score=request.min_reliability_score,
     )
     
-    # Execute characterization action
-    from models import CharacterizeWorkloadAction
+    # Use agent for detailed characterization
+    char_result = app_state.characterizer.characterize(workload)
+    app_state.characterization_cache[session_id] = {
+        "workload": workload,
+        "result": char_result,
+    }
+    
+    # Also execute characterization in environment
     action = CharacterizeWorkloadAction(workload=workload)
     obs = env.step(action)
     
@@ -298,7 +332,27 @@ async def submit_workload(request: WorkloadSubmissionRequest, background_tasks: 
         "status": "submitted",
         "workload_id": workload.id,
         "phase": env.state.phase,
-        "decomposition": env.state.decomposition.model_dump() if env.state.decomposition else None,
+        "decomposition": char_result.decomposition.model_dump(),
+        "characterization": {
+            "confidence": char_result.confidence,
+            "analysis_notes": char_result.analysis_notes,
+            "suggested_providers": char_result.suggested_providers,
+            "total_stages": len(char_result.decomposition.stages),
+            "total_estimated_hours": char_result.decomposition.total_estimated_hours,
+            "total_estimated_cost_usd": char_result.decomposition.total_estimated_cost_usd,
+        },
+        "stages": [
+            {
+                "id": s.id,
+                "name": s.name,
+                "type": s.stage_type.value,
+                "resources": [r.value for r in s.required_resource_types],
+                "duration_hours": s.estimated_duration_hours,
+                "memory_gb": s.estimated_memory_gb,
+                "parallelizable": s.parallelizable,
+            }
+            for s in char_result.decomposition.stages
+        ],
         "reward": obs.reward,
         "hints": obs.hints,
     }
@@ -356,20 +410,61 @@ async def send_counter_offer(session_id: str, offer_id: str, counter_price: floa
 
 @app.post("/plans/generate", response_model=dict)
 async def generate_plans(request: PlanGenerationRequest):
-    """Generate execution plans from current offers."""
+    """Generate execution plans from current offers using planning agent."""
     env = app_state.get_or_create_env(request.session_id)
     
-    from models import GeneratePlanAction
+    # Get characterization data
+    char_data = app_state.characterization_cache.get(request.session_id)
+    if not char_data:
+        raise HTTPException(status_code=400, detail="No workload characterized for this session")
     
-    # Generate plans for each type
-    for plan_type in request.plan_types:
-        action = GeneratePlanAction(plan_type=plan_type)
-        obs = env.step(action)
+    workload = char_data["workload"]
+    decomposition = char_data["result"].decomposition
+    
+    # Get offers from environment
+    offers = env.state.offers if hasattr(env.state, 'offers') else []
+    providers = env.state.providers if hasattr(env.state, 'providers') else []
+    
+    # Use planning agent to generate plans
+    plan_candidates = app_state.planner.generate_plans(
+        workload=workload,
+        decomposition=decomposition,
+        offers=offers,
+        providers=providers,
+    )
+    
+    # Cache plans
+    app_state.plan_cache[request.session_id] = plan_candidates
+    
+    # Also update environment state
+    action = GeneratePlanAction(plan_type="balanced")
+    obs = env.step(action)
+    
+    # Generate comparison data
+    comparison = app_state.planner.compare_plans(plan_candidates, workload)
     
     return {
         "status": "plans_generated",
         "phase": env.state.phase,
-        "plans": [p.model_dump() for p in env.state.plans],
+        "plans": [
+            {
+                "id": pc.plan.id,
+                "name": pc.plan.name,
+                "strategy": pc.strategy,
+                "score": pc.score,
+                "cost": pc.plan.total_cost_usd,
+                "duration": pc.plan.total_duration_hours,
+                "reliability": pc.plan.estimated_reliability,
+                "carbon_kg": pc.plan.carbon_footprint_kg,
+                "pros": pc.pros,
+                "cons": pc.cons,
+                "risks": pc.risk_factors,
+                "allocations": [a.model_dump() for a in pc.plan.allocations],
+            }
+            for pc in plan_candidates
+        ],
+        "comparison": comparison,
+        "recommendation": comparison.get("recommendation") if comparison else None,
         "reward": obs.reward,
         "hints": obs.hints,
     }

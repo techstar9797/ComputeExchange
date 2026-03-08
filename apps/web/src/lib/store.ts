@@ -26,6 +26,34 @@ interface WorkloadState {
   allowHeterogeneousPlan: boolean;
 }
 
+interface CharacterizationResult {
+  confidence: number;
+  analysis_notes: string[];
+  suggested_providers: string[];
+  total_stages: number;
+  total_estimated_hours: number;
+  total_estimated_cost_usd: number;
+}
+
+interface Stage {
+  id: string;
+  name: string;
+  type: string;
+  resources: string[];
+  duration_hours: number;
+  memory_gb: number;
+  parallelizable: boolean;
+}
+
+interface PlanComparison {
+  budget: number;
+  cheapest: number;
+  most_expensive: number;
+  deadline: number;
+  fastest: number;
+  slowest: number;
+}
+
 interface AppStore {
   // Session
   sessionId: string | null;
@@ -34,6 +62,8 @@ interface AppStore {
   // Workload
   workload: WorkloadState;
   decomposition: any | null;
+  characterization: CharacterizationResult | null;
+  stages: Stage[];
   
   // Marketplace
   providers: any[];
@@ -44,6 +74,8 @@ interface AppStore {
   // Plans
   plans: any[];
   selectedPlanId: string | null;
+  planComparison: PlanComparison | null;
+  recommendation: string | null;
   
   // Execution
   execution: any | null;
@@ -57,11 +89,12 @@ interface AppStore {
   setPhase: (phase: AppPhase) => void;
   setWorkload: (workload: Partial<WorkloadState>) => void;
   setDecomposition: (decomposition: any) => void;
+  setCharacterization: (char: CharacterizationResult, stages: Stage[]) => void;
   setProviders: (providers: any[]) => void;
   setOffers: (offers: any[]) => void;
   setNegotiationRound: (round: number) => void;
   setNegotiationStrategy: (strategy: string) => void;
-  setPlans: (plans: any[]) => void;
+  setPlans: (plans: any[], comparison?: any, recommendation?: string) => void;
   setSelectedPlanId: (id: string | null) => void;
   setExecution: (execution: any) => void;
   setEpisodeReward: (reward: number, breakdown?: Record<string, number>) => void;
@@ -91,12 +124,16 @@ export const useAppStore = create<AppStore>((set) => ({
   phase: "landing",
   workload: initialWorkload,
   decomposition: null,
+  characterization: null,
+  stages: [],
   providers: [],
   offers: [],
   negotiationRound: 0,
   negotiationStrategy: "balanced",
   plans: [],
   selectedPlanId: null,
+  planComparison: null,
+  recommendation: null,
   execution: null,
   episodeReward: 0,
   rewardBreakdown: {},
@@ -106,11 +143,13 @@ export const useAppStore = create<AppStore>((set) => ({
   setWorkload: (workload) =>
     set((state) => ({ workload: { ...state.workload, ...workload } })),
   setDecomposition: (decomposition) => set({ decomposition }),
+  setCharacterization: (char, stages) => set({ characterization: char, stages }),
   setProviders: (providers) => set({ providers }),
   setOffers: (offers) => set({ offers }),
   setNegotiationRound: (round) => set({ negotiationRound: round }),
   setNegotiationStrategy: (strategy) => set({ negotiationStrategy: strategy }),
-  setPlans: (plans) => set({ plans }),
+  setPlans: (plans, comparison = null, recommendation = null) => 
+    set({ plans, planComparison: comparison, recommendation }),
   setSelectedPlanId: (id) => set({ selectedPlanId: id }),
   setExecution: (execution) => set({ execution }),
   setEpisodeReward: (reward, breakdown = {}) =>
@@ -121,12 +160,16 @@ export const useAppStore = create<AppStore>((set) => ({
       phase: "landing",
       workload: initialWorkload,
       decomposition: null,
+      characterization: null,
+      stages: [],
       providers: [],
       offers: [],
       negotiationRound: 0,
       negotiationStrategy: "balanced",
       plans: [],
       selectedPlanId: null,
+      planComparison: null,
+      recommendation: null,
       execution: null,
       episodeReward: 0,
       rewardBreakdown: {},
