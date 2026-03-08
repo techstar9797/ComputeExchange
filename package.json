@@ -1,0 +1,27 @@
+{
+  "name": "compute-exchange",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The Expedia/Airbnb/Uber of compute resources - OpenEnv multi-agent marketplace",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:api\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "cd apps/api && uvicorn main:app --reload --port 8000",
+    "build": "npm run build --workspace=apps/web",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "env:serve": "cd openenv/compute_market_env && uvicorn server.app:app --reload --port 8001",
+    "env:docker": "cd openenv/compute_market_env && docker build -t compute-market-env . && docker run -p 8001:8001 compute-market-env"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "scenarios": [
+    {
+      "id": "llm_training_7b",
+      "name": "LLM Training - 7B Parameters",
+      "description": "Train a 7B parameter language model on custom dataset",
+      "difficulty": "medium",
+      "tags": ["training", "llm", "gpu-intensive"],
+      "workload": {
+        "name": "LLM-7B-Training-v1",
+        "workload_type": "llm_training",
+        "model_size_gb": 28,
+        "data_size_gb": 500,
+        "batch_size": 32,
+        "deadline_hours": 72,
+        "budget_usd": 5000,
+        "preferred_regions": ["us-west-2", "us-east-1"],
+        "compliance_requirements": ["SOC2"],
+        "optimization_weights": {
+          "cost": 0.35,
+          "latency": 0.15,
+          "throughput": 0.25,
+          "energy": 0.1,
+          "reliability": 0.15
+        },
+        "allow_spot_instances": true,
+        "allow_heterogeneous_plan": true,
+        "min_reliability_score": 0.95
+      }
+    },
+    {
+      "id": "realtime_inference",
+      "name": "Real-time Inference API",
+      "description": "Deploy low-latency inference endpoint for production traffic",
+      "difficulty": "hard",
+      "tags": ["inference", "low-latency", "production"],
+      "workload": {
+        "name": "Inference-API-Prod",
+        "workload_type": "realtime_inference",
+        "model_size_gb": 8,
+        "deadline_hours": 24,
+        "budget_usd": 2000,
+        "preferred_regions": ["us-east-1"],
+        "compliance_requirements": ["SOC2", "HIPAA"],
+        "optimization_weights": {
+          "cost": 0.2,
+          "latency": 0.4,
+          "throughput": 0.15,
+          "energy": 0.05,
+          "reliability": 0.2
+        },
+        "allow_spot_instances": false,
+        "allow_heterogeneous_plan": true,
+        "min_reliability_score": 0.999
+      }
+    },
+    {
+      "id": "batch_analytics",
+      "name": "Batch Analytics Pipeline",
+      "description": "Process large dataset for business intelligence",
+      "difficulty": "easy",
+      "tags": ["analytics", "batch", "cost-sensitive"],
+      "workload": {
+        "name": "BI-Analytics-Q4",
+        "workload_type": "etl_analytics",
+        "data_size_gb": 2000,
+        "deadline_hours": 8,
+        "budget_usd": 500,
+        "preferred_regions": ["us-west-2"],
+        "compliance_requirements": [],
+        "optimization_weights": {
+          "cost": 0.5,
+          "latency": 0.1,
+          "throughput": 0.2,
+          "energy": 0.1,
+          "reliability": 0.1
+        },
+        "allow_spot_instances": true,
+        "allow_heterogeneous_plan": true,
+        "min_reliability_score": 0.9
+      }
+    },
+    {
+      "id": "multimodal_pipeline",
+      "name": "Multimodal AI Pipeline",
+      "description": "Video + audio processing with multiple model stages",
+      "difficulty": "hard",
+      "tags": ["multimodal", "video", "complex"],
+      "workload": {
+        "name": "MultiModal-Pipeline-v2",
+        "workload_type": "multimodal_pipeline",
+        "model_size_gb": 45,
+        "data_size_gb": 100,
+        "deadline_hours": 12,
+        "budget_usd": 3000,
+        "preferred_regions": ["us-west-2", "us-east-1"],
+        "compliance_requirements": ["SOC2"],
+        "optimization_weights": {
+          "cost": 0.25,
+          "latency": 0.25,
+          "throughput": 0.2,
+          "energy": 0.15,
+          "reliability": 0.15
+        },
+        "allow_spot_instances": true,
+        "allow_heterogeneous_plan": true,
+        "min_reliability_score": 0.95
+      }
+    },
+    {
+      "id": "green_training",
+      "name": "Carbon-Neutral Model Training",
+      "description": "Train model with minimal carbon footprint",
+      "difficulty": "medium",
+      "tags": ["green", "sustainable", "training"],
+      "workload": {
+        "name": "Green-Training-Initiative",
+        "workload_type": "llm_training",
+        "model_size_gb": 15,
+        "data_size_gb": 200,
+        "deadline_hours": 168,
+        "budget_usd": 8000,
+        "preferred_regions": ["eu-north-1"],
+        "compliance_requirements": ["ISO14001"],
+        "optimization_weights": {
+          "cost": 0.15,
+          "latency": 0.05,
+          "throughput": 0.1,
+          "energy": 0.6,
+          "reliability": 0.1
+        },
+        "allow_spot_instances": true,
+        "allow_heterogeneous_plan": true,
+        "min_reliability_score": 0.95
+      }
+    }
+  ]
+}

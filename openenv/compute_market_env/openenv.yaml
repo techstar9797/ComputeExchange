@@ -1,0 +1,128 @@
+# OpenEnv Manifest for ComputeMarketEnv
+# Compute Resource Marketplace Multi-Agent Environment
+
+name: compute_market_env
+version: "0.1.0"
+description: |
+  A multi-agent OpenEnv environment for compute resource marketplace orchestration.
+  Simulates enterprise workload submission, provider negotiation, plan optimization,
+  human-in-the-loop approval, and execution - with shaped rewards for RL training.
+
+author: ComputeExchange Team
+license: MIT
+homepage: https://github.com/compute-exchange/compute-market-env
+
+# Environment metadata
+environment:
+  class: ComputeMarketEnvironment
+  module: server.environment
+  
+  # Episode configuration
+  max_steps: 50
+  max_episode_length: null  # No fixed length, ends on finalize
+  
+  # Reward configuration
+  reward_type: shaped
+  delayed_reward: true
+  reward_range: [-1.0, 1.0]
+  
+  # Multi-agent support
+  multi_agent: true
+  agent_roles:
+    - workload_characterizer
+    - negotiator
+    - planner
+    - approver
+    - executor
+    - learner
+
+# Action space
+action:
+  type: discrete
+  actions:
+    - characterize_workload
+    - request_quotes
+    - counter_offer
+    - switch_strategy
+    - generate_plan
+    - submit_for_approval
+    - revise_plan
+    - approve_plan
+    - reject_plan
+    - execute_plan
+    - finalize_episode
+
+# Observation space
+observation:
+  type: dict
+  fields:
+    - episode_id: string
+    - step_count: int
+    - workload: WorkloadSpec
+    - decomposition: WorkloadDecomposition
+    - current_offers: list[ProviderOffer]
+    - plan_candidates: list[ExecutionPlan]
+    - approval_status: ApprovalDecision
+    - execution_state: ExecutionState
+    - reward_breakdown: dict
+
+# Dependencies
+dependencies:
+  python: ">=3.10"
+  packages:
+    - pydantic>=2.0.0
+    - fastapi>=0.104.0
+    - uvicorn>=0.24.0
+
+# Deployment
+deployment:
+  docker:
+    base_image: python:3.11-slim
+    port: 8001
+  
+  huggingface:
+    sdk: docker
+    app_port: 8001
+
+# Training hooks
+training:
+  trajectory_export: true
+  trajectory_format: jsonl
+  
+  # Compatible frameworks
+  frameworks:
+    - torchforge
+    - trl
+    - openenv
+
+# Scenarios
+scenarios:
+  - id: llm_training_7b
+    name: LLM Training - 7B Parameters
+    difficulty: medium
+  - id: realtime_inference
+    name: Real-time Inference API
+    difficulty: hard
+  - id: batch_analytics
+    name: Batch Analytics Pipeline
+    difficulty: easy
+  - id: multimodal_pipeline
+    name: Multimodal AI Pipeline
+    difficulty: hard
+  - id: green_training
+    name: Carbon-Neutral Model Training
+    difficulty: medium
+
+# Metrics
+metrics:
+  episode:
+    - total_reward
+    - cost_savings
+    - time_savings
+    - sla_compliance
+    - negotiation_rounds
+    - approval_rate
+  aggregate:
+    - avg_reward
+    - regret_vs_oracle
+    - strategy_performance

@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "compute-market-env"
+version = "0.1.0"
+description = "OpenEnv environment for compute resource marketplace orchestration"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    { name = "ComputeExchange Team" }
+]
+keywords = [
+    "openenv",
+    "compute",
+    "marketplace",
+    "multi-agent",
+    "reinforcement-learning",
+    "orchestration",
+    "cloud",
+    "gpu"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+openenv = [
+    "openenv-core>=0.1.0",
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+training = [
+    "torch>=2.0.0",
+    "torchforge>=0.1.0",
+    "trl>=0.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/compute-exchange/compute-market-env"
+Documentation = "https://github.com/compute-exchange/compute-market-env#readme"
+Repository = "https://github.com/compute-exchange/compute-market-env"
+
+[project.scripts]
+compute-market-env = "server.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = [".", "server"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
