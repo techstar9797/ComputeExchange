@@ -442,10 +442,16 @@ async def generate_plans(request: PlanGenerationRequest):
     
     # Cache plans
     app_state.plan_cache[request.session_id] = plan_candidates
+
+    # Store plans directly in environment state instead of using GeneratePlanAction
+    # This ensures the plan IDs match between API and environment
+    # Convert to dicts and back to ensure type compatibility with environment's model classes
+    from server.shared_models import ExecutionPlan as EnvExecutionPlan
+    env.state.plans = [EnvExecutionPlan(**pc.plan.model_dump()) for pc in plan_candidates]
+    env.state.phase = "planning"
     
-    # Also update environment state
-    action = GeneratePlanAction(plan_type="balanced")
-    obs = env.step(action)
+    # Compute planning reward
+    reward = 0.15  # Base reward for generating plans
     
     # Generate comparison data
     comparison = app_state.planner.compare_plans(plan_candidates, workload)
@@ -472,8 +478,8 @@ async def generate_plans(request: PlanGenerationRequest):
         ],
         "comparison": comparison,
         "recommendation": comparison.get("recommendation") if comparison else None,
-        "reward": obs.reward,
-        "hints": obs.hints,
+        "reward": reward,
+        "hints": ["Submit a plan for approval using submit_for_approval"],
     }
 
 
@@ -543,12 +549,22 @@ async def finalize_episode(session_id: str):
     obs = env.step(action)
     
     # Create episode result for history
+    # Convert optimization_weights to dict and back to ensure type compatibility
+    opt_weights_data = (
+        env.state.workload.optimization_weights.model_dump() 
+        if env.state.workload and hasattr(env.state.workload.optimization_weights, 'model_dump')
+        else {}
+    )
+    
+    selected_plan = next((p for p in env.state.plans if p.id == env.state.selected_plan_id), None)
+    provider_ids = [a.provider_id for a in selected_plan.allocations] if selected_plan else []
+    
     result = EpisodeResult(
         episode_id=env.state.episode_id,
         workload_id=env.state.workload.id if env.state.workload else "",
         plan_id=env.state.selected_plan_id or "",
         workload_type=env.state.workload.workload_type if env.state.workload else WorkloadType.ETL_ANALYTICS,
-        optimization_objective=env.state.workload.optimization_weights if env.state.workload else OptimizationWeights(),
+        optimization_objective=OptimizationWeights(**opt_weights_data) if opt_weights_data else OptimizationWeights(),
         negotiation_strategy=env.state.negotiation.strategy if env.state.negotiation else NegotiationStrategy.BALANCED,
         negotiation_rounds=env.state.negotiation.current_round if env.state.negotiation else 0,
         predicted_cost=env.state.execution.predicted_cost_usd if env.state.execution else 0,
@@ -558,7 +574,7 @@ async def finalize_episode(session_id: str):
         sla_met=obs.reward > 0,
         within_budget=True,
         total_reward=obs.reward,
-        provider_ids=[a.provider_id for a in (next((p for p in env.state.plans if p.id == env.state.selected_plan_id), None) or ExecutionPlan(workload_id="", allocations=[], total_cost_usd=0, total_duration_hours=0, plan_type="")).allocations],
+        provider_ids=provider_ids,
         human_approved=env.state.approval_decision == ApprovalDecision.APPROVE,
     )
     app_state.episode_history.append(result)
