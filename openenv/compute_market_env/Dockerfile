@@ -20,9 +20,6 @@ RUN pip install --no-cache-dir -e . || pip install --no-cache-dir pydantic fasta
 # Copy the rest of the code
 COPY . .
 
-# Copy shared types
-COPY ../../packages/shared-types /app/packages/shared-types
-
 # Set environment variables
 ENV PYTHONPATH=/app:/app/packages/shared-types
 ENV PORT=8001

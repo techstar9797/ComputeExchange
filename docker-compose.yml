@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # ComputeExchange API Server
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app:/app/packages/shared-types
+      - ENV=development
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # OpenEnv Environment Server
+  openenv:
+    build:
+      context: .
+      dockerfile: openenv/compute_market_env/Dockerfile.dev
+    ports:
+      - "8001:8001"
+    environment:
+      - PYTHONPATH=/app:/app/packages/shared-types
+      - ENABLE_WEB_INTERFACE=true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Next.js)
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000
+    depends_on:
+      - api

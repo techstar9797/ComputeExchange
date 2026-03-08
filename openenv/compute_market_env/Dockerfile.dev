@@ -1,0 +1,37 @@
+# ComputeMarketEnv Development Docker Image
+# Builds from the repo root context for proper access to shared-types
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy shared types first
+COPY packages/shared-types /app/packages/shared-types
+
+# Copy OpenEnv environment
+COPY openenv/compute_market_env /app/openenv/compute_market_env
+
+# Install Python dependencies
+RUN pip install --no-cache-dir pydantic fastapi uvicorn websockets
+
+# Set environment variables
+ENV PYTHONPATH=/app:/app/packages/shared-types:/app/openenv/compute_market_env
+ENV PORT=8001
+ENV ENABLE_WEB_INTERFACE=true
+
+WORKDIR /app/openenv/compute_market_env
+
+# Expose port
+EXPOSE 8001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"
+
+# Run the server
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8001"]

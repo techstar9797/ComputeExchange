@@ -684,6 +684,75 @@ async def get_episode_history(limit: int = 50):
     return {"episodes": [e.model_dump() for e in history]}
 
 
+@app.get("/trajectory/export")
+async def export_all_trajectories(format: str = "jsonl"):
+    """
+    Export all episode trajectories for RL training.
+    
+    Compatible with:
+    - TorchForge GRPO training
+    - HuggingFace TRL
+    - OpenEnv training loops
+    """
+    trajectories = []
+    
+    for result in app_state.episode_history:
+        # Get env if it still exists, otherwise create placeholder trajectory
+        traj_data = {
+            "episode_id": result.episode_id,
+            "workload_type": result.workload_type.value if hasattr(result.workload_type, 'value') else str(result.workload_type),
+            "optimization_weights": result.optimization_objective.model_dump() if hasattr(result.optimization_objective, 'model_dump') else {},
+            "negotiation_strategy": result.negotiation_strategy.value if hasattr(result.negotiation_strategy, 'value') else str(result.negotiation_strategy),
+            "total_reward": result.total_reward,
+            "sla_met": result.sla_met,
+            "metrics": {
+                "predicted_cost": result.predicted_cost,
+                "actual_cost": result.actual_cost,
+                "predicted_duration": result.predicted_duration,
+                "actual_duration": result.actual_duration,
+                "cost_error": abs(result.actual_cost - result.predicted_cost) / max(result.predicted_cost, 0.01),
+                "duration_error": abs(result.actual_duration - result.predicted_duration) / max(result.predicted_duration, 0.01),
+            },
+        }
+        trajectories.append(traj_data)
+    
+    if format == "jsonl":
+        import json
+        content = "\n".join(json.dumps(t) for t in trajectories)
+        return {"format": "jsonl", "count": len(trajectories), "data": content}
+    
+    return {"format": "json", "count": len(trajectories), "trajectories": trajectories}
+
+
+@app.get("/trajectory/{session_id}/export")
+async def export_session_trajectory(session_id: str):
+    """Export a single session's trajectory in RL-compatible format."""
+    env = app_state.get_or_create_env(session_id)
+    trajectory = env.get_trajectory()
+    
+    # Convert to standard RL format: (state, action, reward, next_state, done)
+    rl_trajectory = []
+    for i, step in enumerate(trajectory):
+        rl_step = {
+            "step": step.get("step", i),
+            "phase": step.get("phase"),
+            "action": step.get("action"),
+            "reward": step.get("reward", step.get("final_reward", 0)),
+            "done": step.get("phase") == "finalization",
+            "info": {
+                "timestamp": step.get("timestamp"),
+            }
+        }
+        rl_trajectory.append(rl_step)
+    
+    return {
+        "session_id": session_id,
+        "episode_id": env.state.episode_id if env.state else None,
+        "trajectory_length": len(rl_trajectory),
+        "trajectory": rl_trajectory,
+    }
+
+
 # =============================================================================
 # WebSocket for Real-time Updates
 # =============================================================================
