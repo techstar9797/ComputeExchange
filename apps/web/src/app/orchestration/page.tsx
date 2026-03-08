@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/select";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { getProviderDisplayName } from "@/lib/provider-names";
 
 const negotiationStrategies = [
   { value: "aggressive", label: "Aggressive", description: "Push for lowest prices" },
@@ -154,7 +155,15 @@ export default function OrchestrationPage() {
 
     try {
       const result = await api.generatePlans(sessionId);
-      setPlans(result.plans || []);
+      const normalizedPlans = (result.plans || []).map((p: any) => ({
+        ...p,
+        plan_type: p.plan_type ?? p.strategy ?? "balanced",
+        total_cost_usd: p.cost ?? p.total_cost_usd ?? 0,
+        total_duration_hours: p.duration ?? p.total_duration_hours ?? 0,
+        optimization_score: p.score ?? p.optimization_score ?? 0.5,
+        reliability_score: p.reliability ?? p.reliability_score ?? 0.9,
+      }));
+      setPlans(normalizedPlans);
       setCurrentPhase("planning");
       
       addLog(`Generated ${result.plans?.length || 0} execution plans`);
@@ -174,7 +183,8 @@ export default function OrchestrationPage() {
     router.push("/approval");
   };
 
-  const formatPrice = (price: number) => `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatPrice = (price: number | undefined | null) =>
+    price != null ? `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—";
 
   return (
     <div className="min-h-screen py-8 px-6">
@@ -430,7 +440,7 @@ export default function OrchestrationPage() {
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <h4 className="text-white font-semibold">{offer.provider_name}</h4>
+                              <h4 className="text-white font-semibold">{getProviderDisplayName(offer)}</h4>
                               <p className="text-xs text-slate-500">{offer.provider_id}</p>
                             </div>
                             {offer.is_spot && (
@@ -574,10 +584,14 @@ export default function OrchestrationPage() {
                                   : "bg-purple-500/20 text-purple-400"
                               }`}
                             >
-                              {plan.plan_type?.charAt(0).toUpperCase() + plan.plan_type?.slice(1)}
+                              {(() => {
+                                const t = plan.plan_type ?? plan.strategy ?? "balanced";
+                                const s = String(t);
+                                return s.charAt(0).toUpperCase() + s.slice(1);
+                              })()}
                             </Badge>
                             <div className="text-xs text-slate-500">
-                              Score: {(plan.optimization_score * 100).toFixed(0)}%
+                              Score: {((plan.optimization_score ?? 0.5) * 100).toFixed(0)}%
                             </div>
                           </div>
 
@@ -591,19 +605,19 @@ export default function OrchestrationPage() {
                             <div className="flex items-center justify-between">
                               <span className="text-slate-400 text-sm">Duration</span>
                               <span className="text-white">
-                                {plan.total_duration_hours?.toFixed(1)}h
+                                {(plan.total_duration_hours ?? 0).toFixed(1)}h
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-slate-400 text-sm">Reliability</span>
                               <span className="text-white">
-                                {(plan.reliability_score * 100).toFixed(1)}%
+                                {((plan.reliability_score ?? 0.9) * 100).toFixed(1)}%
                               </span>
                             </div>
                           </div>
 
                           <Progress
-                            value={plan.optimization_score * 100}
+                            value={(plan.optimization_score ?? 0.5) * 100}
                             className="h-1"
                           />
                         </motion.div>

@@ -28,6 +28,7 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { getProviderDisplayName } from "@/lib/provider-names";
 import { useErrorStore } from "@/lib/error-store";
 import { useSessionRecovery } from "@/hooks/useSessionRecovery";
 
@@ -261,7 +262,7 @@ export default function ApprovalPage() {
                           <div>
                             <div className="text-white font-medium">Stage: {alloc.stage_id?.slice(0, 8)}</div>
                             <div className="text-xs text-slate-400">
-                              Provider: {alloc.provider_name}
+                              Provider: {getProviderDisplayName(alloc)}
                             </div>
                           </div>
                         </div>

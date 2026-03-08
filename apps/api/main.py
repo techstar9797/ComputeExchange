@@ -392,7 +392,7 @@ async def start_negotiation(session_id: str, config: NegotiationConfig):
     """Start negotiation with providers."""
     env = app_state.get_or_create_env(session_id)
     
-    if env.state.phase not in ["characterization", "negotiation"]:
+    if env.state.phase not in ["characterization", "negotiation", "planning"]:
         raise HTTPException(status_code=400, detail=f"Cannot negotiate in phase: {env.state.phase}")
     
     # Set strategy if different
@@ -453,14 +453,19 @@ async def generate_plans(request: PlanGenerationRequest):
         raise HTTPException(status_code=400, detail="No workload characterized for this session")
     
     workload = char_data["workload"]
-    decomposition = char_data["result"].decomposition
+    # Use env's decomposition so stage IDs match offers from market
+    decomposition = (
+        env.state.decomposition
+        if env.state.decomposition and env.state.decomposition.stages
+        else char_data["result"].decomposition
+    )
     
     # Get offers from environment negotiation state
     offers = []
-    if env.state.negotiation and hasattr(env.state.negotiation, 'offers'):
+    if env.state.negotiation and hasattr(env.state.negotiation, "offers"):
         offers = env.state.negotiation.offers
     
-    providers = env.state.providers if hasattr(env.state, 'providers') else []
+    providers = env.state.providers if hasattr(env.state, "providers") else []
     
     # Use planning agent to generate plans
     plan_candidates = app_state.planner.generate_plans(
@@ -469,6 +474,15 @@ async def generate_plans(request: PlanGenerationRequest):
         offers=offers,
         providers=providers,
     )
+    
+    # Fallback to env's plan generator if planner returns empty (e.g. stage ID mismatch)
+    if not plan_candidates and offers and decomposition.stages:
+        env_plans = env._generate_plans(decomposition, offers, ["cheapest", "fastest", "balanced", "greenest"])
+        from agents.planner import PlanCandidate
+        plan_candidates = [
+            PlanCandidate(plan=p, strategy=p.plan_type, score=p.optimization_score or 0.8, pros=[], cons=[], risk_factors=[])
+            for p in env_plans
+        ]
     
     # Cache plans
     app_state.plan_cache[request.session_id] = plan_candidates

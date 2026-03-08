@@ -1,8 +1,8 @@
 {
   "providers": [
     {
-      "id": "neocloud-alpha",
-      "name": "NeoCloud Alpha",
+      "id": "nebius",
+      "name": "Nebius",
       "provider_type": "neocloud_gpu",
       "capacity": {
         "gpu_count": 128,
@@ -34,11 +34,11 @@
       "sla_uptime_guarantee": 0.995,
       "max_job_duration_hours": 720,
       "active": true,
-      "description": "High-performance GPU cloud optimized for AI/ML workloads"
+      "description": "AI-native cloud with GPU focus for ML workloads"
     },
     {
-      "id": "datacenter-prime",
-      "name": "DataCenter Prime",
+      "id": "aws",
+      "name": "AWS",
       "provider_type": "datacenter_cpu",
       "capacity": {
         "gpu_count": 32,
@@ -70,11 +70,83 @@
       "sla_uptime_guarantee": 0.9999,
       "max_job_duration_hours": 2160,
       "active": true,
-      "description": "Enterprise-grade datacenter with highest reliability guarantees"
+      "description": "Enterprise cloud with highest reliability and compliance"
     },
     {
-      "id": "hyperscale-cloud",
-      "name": "HyperScale Cloud",
+      "id": "lambda-labs",
+      "name": "Lambda Labs",
+      "provider_type": "edge_npu",
+      "capacity": {
+        "gpu_count": 256,
+        "gpu_memory_gb": 80,
+        "cpu_cores": 512,
+        "memory_gb": 4096,
+        "storage_tb": 200,
+        "npu_count": 0,
+        "utilization_percent": 55
+      },
+      "pricing": {
+        "base_gpu_hour_usd": 2.20,
+        "base_cpu_hour_usd": 0.06,
+        "base_npu_hour_usd": 0,
+        "spot_discount_percent": 50,
+        "reserved_discount_percent": 25,
+        "volume_discount_thresholds": [[100, 5], [500, 10]],
+        "min_commitment_hours": 1,
+        "surge_multiplier": 1.3
+      },
+      "reliability_score": 0.96,
+      "avg_latency_ms": 15,
+      "regions": ["us-west-2", "us-east-1"],
+      "compliance_certifications": ["SOC2"],
+      "carbon_intensity_gco2_kwh": 280,
+      "renewable_energy_percent": 60,
+      "negotiation_flexibility": 0.30,
+      "negotiation_style": "cooperative",
+      "sla_uptime_guarantee": 0.99,
+      "max_job_duration_hours": 720,
+      "active": true,
+      "description": "GPU cloud optimized for AI training and inference"
+    },
+    {
+      "id": "coreweave",
+      "name": "CoreWeave",
+      "provider_type": "green_datacenter",
+      "capacity": {
+        "gpu_count": 512,
+        "gpu_memory_gb": 80,
+        "cpu_cores": 2048,
+        "memory_gb": 8192,
+        "storage_tb": 500,
+        "npu_count": 0,
+        "utilization_percent": 50
+      },
+      "pricing": {
+        "base_gpu_hour_usd": 2.40,
+        "base_cpu_hour_usd": 0.05,
+        "base_npu_hour_usd": 0,
+        "spot_discount_percent": 55,
+        "reserved_discount_percent": 28,
+        "volume_discount_thresholds": [[100, 5], [500, 12], [1000, 18]],
+        "min_commitment_hours": 4,
+        "surge_multiplier": 1.4
+      },
+      "reliability_score": 0.98,
+      "avg_latency_ms": 20,
+      "regions": ["us-east-1", "us-west-2", "eu-central-1"],
+      "compliance_certifications": ["SOC2", "ISO27001", "ISO14001"],
+      "carbon_intensity_gco2_kwh": 120,
+      "renewable_energy_percent": 80,
+      "negotiation_flexibility": 0.22,
+      "negotiation_style": "cooperative",
+      "sla_uptime_guarantee": 0.995,
+      "max_job_duration_hours": 720,
+      "active": true,
+      "description": "GPU cloud with strong sustainability focus"
+    },
+    {
+      "id": "google-cloud",
+      "name": "Google Cloud",
       "provider_type": "hyperscaler",
       "capacity": {
         "gpu_count": 512,
@@ -106,79 +178,43 @@
       "sla_uptime_guarantee": 0.9999,
       "max_job_duration_hours": 8760,
       "active": true,
-      "description": "Global hyperscaler with extensive resource pool and global presence"
+      "description": "Global hyperscaler with extensive GPU and TPU options"
     },
     {
-      "id": "edge-neural",
-      "name": "Edge Neural",
-      "provider_type": "edge_npu",
+      "id": "azure",
+      "name": "Azure",
+      "provider_type": "hyperscaler",
       "capacity": {
-        "gpu_count": 0,
-        "gpu_memory_gb": 0,
-        "cpu_cores": 128,
-        "memory_gb": 512,
-        "storage_tb": 50,
-        "npu_count": 256,
-        "utilization_percent": 30
+        "gpu_count": 384,
+        "gpu_memory_gb": 80,
+        "cpu_cores": 3072,
+        "memory_gb": 12288,
+        "storage_tb": 800,
+        "npu_count": 32,
+        "utilization_percent": 52
       },
       "pricing": {
-        "base_gpu_hour_usd": 0,
-        "base_cpu_hour_usd": 0.03,
-        "base_npu_hour_usd": 0.80,
-        "spot_discount_percent": 30,
-        "reserved_discount_percent": 25,
-        "volume_discount_thresholds": [[50, 5], [200, 10]],
-        "min_commitment_hours": 1,
-        "surge_multiplier": 1.3
+        "base_gpu_hour_usd": 3.20,
+        "base_cpu_hour_usd": 0.048,
+        "base_npu_hour_usd": 1.00,
+        "spot_discount_percent": 65,
+        "reserved_discount_percent": 32,
+        "volume_discount_thresholds": [[100, 4], [500, 8], [1500, 14]],
+        "min_commitment_hours": 0,
+        "surge_multiplier": 1.8
       },
-      "reliability_score": 0.96,
-      "avg_latency_ms": 5,
-      "regions": ["us-west-2", "us-east-1"],
-      "compliance_certifications": ["SOC2"],
-      "carbon_intensity_gco2_kwh": 200,
-      "renewable_energy_percent": 60,
-      "negotiation_flexibility": 0.30,
-      "negotiation_style": "cooperative",
-      "sla_uptime_guarantee": 0.99,
-      "max_job_duration_hours": 168,
+      "reliability_score": 0.9995,
+      "avg_latency_ms": 18,
+      "regions": ["eastus", "westus2", "westeurope", "southeastasia"],
+      "compliance_certifications": ["SOC2", "ISO27001", "HIPAA", "PCI-DSS", "FedRAMP"],
+      "carbon_intensity_gco2_kwh": 420,
+      "renewable_energy_percent": 45,
+      "negotiation_flexibility": 0.12,
+      "negotiation_style": "balanced",
+      "sla_uptime_guarantee": 0.9999,
+      "max_job_duration_hours": 8760,
       "active": true,
-      "description": "Edge-optimized NPU provider for low-latency inference"
-    },
-    {
-      "id": "green-compute",
-      "name": "Green Compute",
-      "provider_type": "green_datacenter",
-      "capacity": {
-        "gpu_count": 64,
-        "gpu_memory_gb": 48,
-        "cpu_cores": 512,
-        "memory_gb": 4096,
-        "storage_tb": 200,
-        "npu_count": 0,
-        "utilization_percent": 50
-      },
-      "pricing": {
-        "base_gpu_hour_usd": 2.80,
-        "base_cpu_hour_usd": 0.06,
-        "base_npu_hour_usd": 0,
-        "spot_discount_percent": 45,
-        "reserved_discount_percent": 30,
-        "volume_discount_thresholds": [[100, 5], [500, 12]],
-        "min_commitment_hours": 4,
-        "surge_multiplier": 1.4
-      },
-      "reliability_score": 0.98,
-      "avg_latency_ms": 35,
-      "regions": ["eu-north-1", "us-west-2"],
-      "compliance_certifications": ["SOC2", "ISO27001", "ISO14001"],
-      "carbon_intensity_gco2_kwh": 50,
-      "renewable_energy_percent": 100,
-      "negotiation_flexibility": 0.20,
-      "negotiation_style": "cooperative",
-      "sla_uptime_guarantee": 0.995,
-      "max_job_duration_hours": 720,
-      "active": true,
-      "description": "100% renewable energy datacenter for carbon-conscious workloads"
+      "description": "Enterprise cloud with hybrid and AI capabilities"
     }
   ]
 }

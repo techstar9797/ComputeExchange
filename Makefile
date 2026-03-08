@@ -11,19 +11,21 @@ install-dev:
 	cd apps/api && pip install -r requirements.txt -r requirements-dev.txt
 	cd openenv/compute_market_env && pip install -e ".[dev]"
 
-# Development servers
+# Development servers (Node 20+ required for Next.js 16)
+NODE20 := /opt/homebrew/opt/node@20/bin
+
 dev:
 	@echo "Starting all services..."
 	make -j3 dev-web dev-api dev-env
 
 dev-web:
-	npm run dev:web
+	@[ -d "$(NODE20)" ] && PATH="$(NODE20):$$PATH" npm run dev:web || npm run dev:web
 
 dev-api:
-	cd apps/api && uvicorn main:app --reload --port 8000
+	cd apps/api && python3 -m uvicorn main:app --reload --port 8000
 
 dev-env:
-	cd openenv/compute_market_env && uvicorn server.app:app --reload --port 8001
+	cd openenv/compute_market_env && python3 -m uvicorn server.app:app --reload --port 8001
 
 # Build
 build:

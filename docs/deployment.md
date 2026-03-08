@@ -85,17 +85,18 @@ services:
 
 ## Hugging Face Spaces
 
-The OpenEnv environment can be deployed to Hugging Face Spaces:
+Deploy to the [OpenEnv Spaces hub](https://huggingface.co/openenv/spaces):
 
 ```bash
 # Install openenv CLI
 pip install openenv
 
-# Push environment
-openenv push --repo-id your-org/compute-market-env
+# Push to OpenEnv org (requires permissions) or your own Space
+openenv push --repo-id openenv/compute-market-env
+# Or: openenv push --repo-id YOUR_USERNAME/compute-market-env
 ```
 
-Update `ENV_BASE_URL` in the API to point to your Spaces URL.
+Update `ENV_BASE_URL` in the API to your Space URL (e.g. `https://YOUR_USERNAME-compute-market-env.hf.space`).
 
 ## Environment Variables
 

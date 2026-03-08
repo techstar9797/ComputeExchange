@@ -264,7 +264,7 @@ class ComputeMarketEnvironment(Environment):
     
     def _handle_request_quotes(self, action_data: dict) -> Observation:
         """Handle quote requests from providers."""
-        if self._state.phase not in ["characterization", "negotiation"]:
+        if self._state.phase not in ["characterization", "negotiation", "planning"]:
             return self._create_error_observation(
                 f"Cannot request quotes in phase: {self._state.phase}"
             )

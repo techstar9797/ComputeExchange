@@ -188,12 +188,12 @@ export const useAppStore = create<AppStore>()(
       if (state.plans && state.plans.length > 0) {
         next.plans = state.plans.map((p: any) => ({
           id: p.id,
-          plan_type: p.plan_type || "balanced",
-          total_cost_usd: p.total_cost_usd ?? 0,
-          total_duration_hours: p.total_duration_hours ?? 0,
-          reliability_score: p.reliability_score ?? 0.9,
+          plan_type: p.plan_type ?? p.strategy ?? "balanced",
+          total_cost_usd: p.total_cost_usd ?? p.cost ?? 0,
+          total_duration_hours: p.total_duration_hours ?? p.duration ?? 0,
+          reliability_score: p.reliability_score ?? p.reliability ?? 0.9,
           carbon_footprint_kg: p.carbon_footprint_kg ?? 0,
-          optimization_score: p.optimization_score ?? 0.5,
+          optimization_score: p.optimization_score ?? p.score ?? 0.5,
         }));
       }
       return next;
@@ -222,7 +222,7 @@ export const useAppStore = create<AppStore>()(
       if (state.plans?.length) {
         next.plans = state.plans.map((p: any) => ({
           id: p.id,
-          plan_type: p.plan_type || "balanced",
+          plan_type: p.plan_type ?? p.strategy ?? "balanced",
           total_cost_usd: p.total_cost_usd ?? 0,
           total_duration_hours: p.total_duration_hours ?? 0,
           reliability_score: p.reliability_score ?? 0.9,

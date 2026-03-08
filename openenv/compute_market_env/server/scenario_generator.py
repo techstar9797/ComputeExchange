@@ -44,11 +44,11 @@ class ScenarioGenerator:
     - Configurable difficulty levels
     """
     
-    # Provider archetypes
+    # Provider archetypes (real cloud provider names)
     PROVIDER_ARCHETYPES = {
         "neocloud_gpu": ProviderProfile(
-            id="neocloud-alpha",
-            name="NeoCloud Alpha",
+            id="nebius",
+            name="Nebius",
             provider_type=ProviderType.NEOCLOUD_GPU,
             capacity=ProviderCapacity(
                 gpu_count=128,
@@ -77,8 +77,8 @@ class ScenarioGenerator:
             sla_uptime_guarantee=0.995,
         ),
         "datacenter_cpu": ProviderProfile(
-            id="datacenter-prime",
-            name="DataCenter Prime",
+            id="aws",
+            name="AWS",
             provider_type=ProviderType.DATACENTER_CPU,
             capacity=ProviderCapacity(
                 gpu_count=32,
@@ -107,8 +107,8 @@ class ScenarioGenerator:
             sla_uptime_guarantee=0.9999,
         ),
         "hyperscaler": ProviderProfile(
-            id="hyperscale-cloud",
-            name="HyperScale Cloud",
+            id="google-cloud",
+            name="Google Cloud",
             provider_type=ProviderType.HYPERSCALER,
             capacity=ProviderCapacity(
                 gpu_count=512,
@@ -137,8 +137,8 @@ class ScenarioGenerator:
             sla_uptime_guarantee=0.9999,
         ),
         "edge_npu": ProviderProfile(
-            id="edge-neural",
-            name="Edge Neural",
+            id="lambda-labs",
+            name="Lambda Labs",
             provider_type=ProviderType.EDGE_NPU,
             capacity=ProviderCapacity(
                 gpu_count=0,
@@ -168,8 +168,8 @@ class ScenarioGenerator:
             sla_uptime_guarantee=0.99,
         ),
         "green_datacenter": ProviderProfile(
-            id="green-compute",
-            name="Green Compute",
+            id="coreweave",
+            name="CoreWeave",
             provider_type=ProviderType.GREEN_DATACENTER,
             capacity=ProviderCapacity(
                 gpu_count=64,
@@ -197,8 +197,38 @@ class ScenarioGenerator:
             negotiation_style=NegotiationStrategy.COOPERATIVE,
             sla_uptime_guarantee=0.995,
         ),
+        "hyperscaler_azure": ProviderProfile(
+            id="azure",
+            name="Azure",
+            provider_type=ProviderType.HYPERSCALER,
+            capacity=ProviderCapacity(
+                gpu_count=384,
+                gpu_memory_gb=80,
+                cpu_cores=3072,
+                memory_gb=12288,
+                storage_tb=800,
+                utilization_percent=52,
+            ),
+            pricing=PricingPolicy(
+                base_gpu_hour_usd=3.20,
+                base_cpu_hour_usd=0.048,
+                spot_discount_percent=65,
+                reserved_discount_percent=32,
+                min_commitment_hours=0,
+                surge_multiplier=1.8,
+            ),
+            reliability_score=0.9995,
+            avg_latency_ms=18,
+            regions=["eastus", "westus2", "westeurope", "southeastasia"],
+            compliance_certifications=["SOC2", "ISO27001", "HIPAA", "PCI-DSS", "FedRAMP"],
+            carbon_intensity_gco2_kwh=420,
+            renewable_energy_percent=45,
+            negotiation_flexibility=0.12,
+            negotiation_style=NegotiationStrategy.BALANCED,
+            sla_uptime_guarantee=0.9999,
+        ),
     }
-    
+
     # Predefined scenarios for demo
     DEMO_SCENARIOS = {
         "llm_training_7b": Scenario(

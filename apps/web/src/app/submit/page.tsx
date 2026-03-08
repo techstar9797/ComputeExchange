@@ -278,9 +278,11 @@ export default function SubmitWorkloadPage() {
                       </div>
                       <Slider
                         value={[(workload[key as keyof typeof workload] as number) * 100]}
-                        onValueChange={([value]) =>
-                          setWorkload({ [key]: value / 100 })
-                        }
+                        onValueChange={(...args: unknown[]) => {
+                          const v = args[0];
+                          const num = typeof v === "number" ? v : Array.isArray(v) ? v[0] : 0;
+                          setWorkload({ [key]: Number(num) / 100 });
+                        }}
                         max={100}
                         step={5}
                         className="cursor-pointer"

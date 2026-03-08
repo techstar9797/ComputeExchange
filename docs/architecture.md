@@ -88,11 +88,12 @@ Computes shaped rewards:
 ### 6. Provider Agents
 
 Simulated providers with different characteristics:
-- **NeoCloud Alpha**: GPU-focused, aggressive negotiation
-- **DataCenter Prime**: CPU-focused, defensive, high reliability
-- **HyperScale Cloud**: Balanced, global presence
-- **Edge Neural**: NPU-focused, low latency
-- **Green Compute**: 100% renewable, cooperative
+- **Nebius**: AI-native GPU cloud, aggressive negotiation
+- **AWS**: Enterprise, defensive, high reliability
+- **Lambda Labs**: GPU cloud for AI training/inference
+- **CoreWeave**: GPU cloud with sustainability focus
+- **Google Cloud**: Hyperscaler, balanced, global presence
+- **Azure**: Enterprise cloud, hybrid and AI capabilities
 
 ## Data Flow
 

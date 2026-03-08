@@ -8,6 +8,18 @@ An OpenEnv-native multi-agent compute marketplace where AI agents orchestrate wo
 [![TorchForge](https://img.shields.io/badge/TorchForge-Ready-orange)](https://github.com/meta-pytorch/torchforge)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
+**Links for judges**
+- **Hugging Face Space (OpenEnv):** [https://huggingface.co/spaces/mavericks97/ComputeExchange1](https://huggingface.co/spaces/mavericks97/ComputeExchange1)
+- **Minimal training script (Unsloth / HF TRL in Colab):** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/techstar9797/ComputeExchange/blob/main/scripts/train_colab.ipynb) · [scripts/train_colab.ipynb](scripts/train_colab.ipynb) · [scripts/train_colab.py](scripts/train_colab.py) · [COLAB_TRAINING.md](scripts/COLAB_TRAINING.md)
+
+**OpenEnv & hackathon**
+- **More details:** [OpenEnv Opening Slides (PDF)](https://drive.google.com/file/d/1Ip-NnoIAnpTH7Mup5LKhriNhqriglpKr/view) · [HACKATHON.md](HACKATHON.md) (themes, partners, rules, refs)
+- **OpenEnv Spaces:** [huggingface.co/spaces?q=OpenEnv](https://huggingface.co/spaces?q=OpenEnv) · [openenv/spaces](https://huggingface.co/openenv/spaces) · **Reference:** [openenv/echo_env](https://huggingface.co/spaces/openenv/echo_env)
+- **OpenEnv:** [github.com/meta-pytorch/OpenEnv](https://github.com/meta-pytorch/OpenEnv) · [meta-pytorch.org/OpenEnv](https://meta-pytorch.org/OpenEnv/) · [Tutorials & envs](https://github.com/meta-pytorch/OpenEnv/tree/main/tutorial)
+- **Environment Hub:** [huggingface.co/collections/openenv](https://huggingface.co/collections/openenv)
+- **TRL + OpenEnv:** [huggingface.co/docs/trl/en/openenv](https://huggingface.co/docs/trl/en/openenv) · [TRL OpenEnv examples](https://github.com/huggingface/trl/tree/main/examples/scripts/openenv)
+- **Scaling experiments:** [github.com/burtenshaw/openenv-scaling](https://github.com/burtenshaw/openenv-scaling)
+
 ## Overview
 
 ComputeExchange solves the complex problem of optimal compute resource allocation:
@@ -54,7 +66,7 @@ This is built as a **real OpenEnv environment** with proper Gymnasium-style APIs
 ┌────────────────────────────▼────────────────────────────────────────┐
 │                       Provider Agents                               │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
-│  │ NeoCloud │ │DataCenter│ │HyperScale│ │Edge NPU  │ │  Green   │  │
+│  │  Nebius  │ │   AWS    │ │ Lambda  │ │CoreWeave │ │  Google  │  │  Azure   │
 │  │   GPU    │ │   CPU    │ │  Cloud   │ │ Provider │ │Datacenter│  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
 └─────────────────────────────────────────────────────────────────────┘
@@ -72,8 +84,8 @@ This is built as a **real OpenEnv environment** with proper Gymnasium-style APIs
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/compute-exchange.git
-cd compute-exchange
+git clone https://github.com/techstar9797/ComputeExchange.git
+cd ComputeExchange
 
 # Install all dependencies
 make install
@@ -292,7 +304,7 @@ Pre-built scenarios for demos and benchmarks:
 - OpenEnv-compatible server
 - Gymnasium-style API
 - Docker deployment ready
-- HuggingFace Spaces compatible
+- [HuggingFace Spaces](https://huggingface.co/openenv/spaces) compatible
 
 ## Hackathon Positioning
 
@@ -304,6 +316,23 @@ This project demonstrates:
 4. **Measurable Outcomes** - Clear metrics and reward signals
 5. **Training Ready** - Trajectories exportable for GRPO/TRL post-training
 6. **Production Quality** - Full-stack implementation with polished UI
+
+## Training Script (Colab + HF TRL)
+
+A minimal training script shows **reward curves** and a **TRL-based training pipeline** for judging (Unsloth or HF TRL in Colab):
+
+- **Open in Colab (one-click):** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/techstar9797/ComputeExchange/blob/main/scripts/train_colab.ipynb)
+- **Script:** [scripts/train_colab.py](scripts/train_colab.py) – runs env episodes, plots rewards, exports trajectories, runs reward-weighted SFT with TRL (`distilgpt2`).
+- **Colab instructions:** [scripts/COLAB_TRAINING.md](scripts/COLAB_TRAINING.md) – clone repo, install deps, run script; optional Unsloth 4-bit.
+
+```bash
+# Local (from repo root)
+pip install transformers trl datasets torch accelerate matplotlib
+pip install -e ./packages/shared-types && pip install -e ./openenv/compute_market_env
+python scripts/train_colab.py
+```
+
+Outputs: `compute_exchange_reward_curves.png`, `trajectories/episodes.jsonl`, and a TRL checkpoint.
 
 ## Development
 
@@ -340,10 +369,11 @@ make validate-trajectory
 
 ### HuggingFace Spaces
 
-The OpenEnv environment can be deployed to HuggingFace Spaces:
+Deploy to the [OpenEnv Spaces hub](https://huggingface.co/openenv/spaces):
 
 ```bash
-openenv push --repo-id your-org/compute-market-env
+openenv push --repo-id openenv/compute-market-env
+# Or under your org: openenv push --repo-id YOUR_USERNAME/compute-market-env
 ```
 
 ## License
