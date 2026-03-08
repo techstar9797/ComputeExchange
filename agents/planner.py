@@ -482,12 +482,21 @@ class PlanningAgent:
         """Calculate cost for executing a stage with a given offer."""
         duration = stage.estimated_duration_hours or 1.0
         
-        if hasattr(offer, 'quoted_price_usd') and offer.quoted_price_usd:
-            stage_fraction = 1.0 / 8.0
-            return offer.quoted_price_usd * stage_fraction * (duration / (offer.quoted_duration_hours or 1.0))
+        is_gpu = ResourceType.GPU in stage.required_resource_types if stage.required_resource_types else False
+        base_rate = 2.50 if is_gpu else 0.15
         
-        base_rate = 2.50 if ResourceType.GPU in stage.required_resource_types else 0.10
-        return base_rate * duration
+        res_alloc = offer.resource_allocation or {}
+        resource_multiplier = 1.0
+        for res_type, count in res_alloc.items():
+            if res_type == ResourceType.GPU:
+                resource_multiplier = max(resource_multiplier, count * 0.5)
+            elif res_type == ResourceType.CPU:
+                resource_multiplier = max(resource_multiplier, count * 0.1)
+        
+        spot_discount = 0.7 if offer.is_spot else 1.0
+        
+        cost = base_rate * duration * resource_multiplier * spot_discount
+        return max(cost, 0.10)
 
     def _score_plan(self, plan: ExecutionPlan, workload: WorkloadSpec, strategy: str) -> float:
         """Score a plan based on how well it meets objectives."""

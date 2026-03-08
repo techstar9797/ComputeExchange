@@ -137,15 +137,15 @@ class NegotiationAgent:
             messages.append(provider_response)
             
             if new_offer:
-                achieved_discount = 1.0 - (new_offer.total_cost_usd / initial_offer.total_cost_usd)
+                achieved_discount = 1.0 - (new_offer.quoted_price_usd / initial_offer.quoted_price_usd)
                 
                 if achieved_discount >= self.params["min_acceptable_discount"]:
                     accept_message = NegotiationMessage(
                         sender="agent",
                         recipient=provider.id,
                         message_type="accept",
-                        content=f"We accept the offer at ${new_offer.total_cost_usd:.2f}",
-                        proposed_price_usd=new_offer.total_cost_usd,
+                        content=f"We accept the offer at ${new_offer.quoted_price_usd:.2f}",
+                        proposed_price_usd=new_offer.quoted_price_usd,
                     )
                     messages.append(accept_message)
                     
@@ -174,7 +174,7 @@ class NegotiationAgent:
             if current_ask < self.params["walk_away_threshold"]:
                 break
         
-        final_discount = 1.0 - (current_offer.total_cost_usd / initial_offer.total_cost_usd)
+        final_discount = 1.0 - (current_offer.quoted_price_usd / initial_offer.quoted_price_usd)
         
         if final_discount >= self.params["walk_away_threshold"]:
             return NegotiationResult(
@@ -201,7 +201,7 @@ class NegotiationAgent:
         offer: ProviderOffer,
     ) -> NegotiationMessage:
         """Generate a negotiation message based on strategy."""
-        target_price = offer.total_cost_usd * (1 - current_ask)
+        target_price = offer.quoted_price_usd * (1 - current_ask)
         
         if self.strategy == NegotiationStrategy.AGGRESSIVE:
             if round_num == 1:
@@ -254,31 +254,27 @@ class NegotiationAgent:
         
         actual_discount = max(0, min(actual_discount, flexibility))
         
-        new_price = current_offer.total_cost_usd * (1 - actual_discount)
+        new_price = current_offer.quoted_price_usd * (1 - actual_discount)
         
         if actual_discount < 0.02:
-            content = f"Our pricing is already competitive. Best we can do is ${current_offer.total_cost_usd:.2f}."
+            content = f"Our pricing is already competitive. Best we can do is ${current_offer.quoted_price_usd:.2f}."
             new_offer = None
         else:
             content = f"We can offer ${new_price:.2f}. This includes our best available rates."
             new_offer = ProviderOffer(
                 provider_id=provider.id,
                 provider_name=provider.name,
-                gpu_count=current_offer.gpu_count,
-                gpu_type=current_offer.gpu_type,
-                gpu_memory_gb=current_offer.gpu_memory_gb,
-                cpu_count=current_offer.cpu_count,
-                memory_gb=current_offer.memory_gb,
-                storage_tb=current_offer.storage_tb,
-                gpu_hour_usd=current_offer.gpu_hour_usd * (1 - actual_discount) if current_offer.gpu_hour_usd else None,
-                cpu_hour_usd=current_offer.cpu_hour_usd * (1 - actual_discount) if current_offer.cpu_hour_usd else None,
-                total_cost_usd=new_price,
-                estimated_duration_hours=current_offer.estimated_duration_hours,
+                workload_id=current_offer.workload_id,
+                stage_ids=current_offer.stage_ids,
+                quoted_price_usd=round(new_price, 2),
+                quoted_duration_hours=current_offer.quoted_duration_hours,
+                resource_allocation=current_offer.resource_allocation,
                 is_spot=current_offer.is_spot,
-                region=current_offer.region,
-                availability_percent=current_offer.availability_percent,
-                sla_uptime=current_offer.sla_uptime,
                 valid_until=current_offer.valid_until,
+                reliability_estimate=current_offer.reliability_estimate,
+                carbon_footprint_kg=current_offer.carbon_footprint_kg,
+                terms=current_offer.terms,
+                negotiation_round=current_offer.negotiation_round + 1,
             )
         
         message = NegotiationMessage(
@@ -286,7 +282,7 @@ class NegotiationAgent:
             recipient="agent",
             message_type="response",
             content=content,
-            proposed_price_usd=new_price if new_offer else current_offer.total_cost_usd,
+            proposed_price_usd=new_price if new_offer else current_offer.quoted_price_usd,
         )
         
         return message, new_offer
@@ -311,7 +307,7 @@ class NegotiationAgent:
         successful = [n for n in self.negotiation_history if n.status == "accepted"]
         
         avg_discount = sum(
-            1 - (n.current_best_offer.total_cost_usd / n.initial_offer_usd) 
+            1 - (n.current_best_offer.quoted_price_usd / n.initial_offer_usd) 
             for n in successful 
             if n.current_best_offer and hasattr(n, 'initial_offer_usd')
         ) / len(successful) if successful else 0
